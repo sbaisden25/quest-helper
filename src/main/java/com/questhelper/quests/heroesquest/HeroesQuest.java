@@ -540,7 +540,7 @@ public class HeroesQuest extends BasicQuestHelper
 		req.add(new QuestRequirement(Quest.SHIELD_OF_ARRAV, QuestState.FINISHED));
 		req.add(new QuestRequirement(Quest.LOST_CITY, QuestState.FINISHED));
 		req.add(new QuestRequirement(Quest.MERLINS_CRYSTAL, QuestState.FINISHED));
-		req.add(new QuestRequirement(Quest.DRAGON_SLAYER, QuestState.FINISHED));
+		req.add(new QuestRequirement(Quest.DRAGON_SLAYER_I, QuestState.FINISHED));
 		return req;
 	}
 }
