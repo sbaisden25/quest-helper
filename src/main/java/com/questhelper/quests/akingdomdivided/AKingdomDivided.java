@@ -45,16 +45,18 @@ import com.questhelper.requirements.quest.QuestRequirement;
 import com.questhelper.requirements.util.LogicType;
 import com.questhelper.requirements.util.Spellbook;
 import com.questhelper.requirements.var.VarbitRequirement;
+import com.questhelper.rewards.ExperienceReward;
+import com.questhelper.rewards.ItemReward;
+import com.questhelper.rewards.QuestPointReward;
+import com.questhelper.rewards.UnlockReward;
 import com.questhelper.steps.ConditionalStep;
 import com.questhelper.steps.DetailedQuestStep;
 import com.questhelper.steps.NpcStep;
 import com.questhelper.steps.ObjectStep;
 import com.questhelper.steps.QuestStep;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+
+import java.util.*;
+
 import net.runelite.api.InventoryID;
 import net.runelite.api.ItemID;
 import net.runelite.api.NpcID;
@@ -121,7 +123,7 @@ public class AKingdomDivided extends BasicQuestHelper
 		kharedstsMemoirs, anyAxe, rosesNote2, combatGear, fireSpellGear, coldKey, rosesNote3, gamesNecklace, rosesNote4,
 		fairyRingStaffOrGamesNecklace, combatGearForXamphur, kahtEgg, dampKey, defencePotion, volcanicSulphur, moltenGlass,
 		darkEssenceBlock, brokenRedirector, sulphurPotion, shieldingPotion, lovaDeclaration, fairyRingStaff, darkNullifier,
-		shayzienJournal, skillNecklace;
+		shayzienJournal;
 
 	Requirement freeInventorySlots;
 
@@ -469,7 +471,6 @@ public class AKingdomDivided extends BasicQuestHelper
 		darkNullifier.setTooltip("You can obtain another from Mori in the Arceuus Church.");
 		shayzienJournal = new ItemRequirement("Shayzien Journal", ItemID.SHAYZIEN_JOURNAL);
 		shayzienJournal.setTooltip("You can get another one from the chest inside of the barrel in the Hosidious vinery.");
-		skillNecklace = new ItemRequirement("Skills Necklace", ItemCollections.getSkillsNecklaces());
 	}
 
 	public void setupConditions()
@@ -815,7 +816,7 @@ public class AKingdomDivided extends BasicQuestHelper
 	public List<ItemRequirement> getItemRecommended()
 	{
 		return Arrays.asList(new ItemRequirement("Kharedst's Memoirs for teleports", ItemID.KHAREDSTS_MEMOIRS),
-			fairyRingStaffOrGamesNecklace, gamesNecklace, skillNecklace);
+			fairyRingStaffOrGamesNecklace, gamesNecklace);
 	}
 
 	@Override
@@ -828,6 +829,28 @@ public class AKingdomDivided extends BasicQuestHelper
 		reqs.add("Judge of Yama (level 168)");
 		reqs.add("Xamphur (level 239)");
 		return reqs;
+	}
+
+	@Override
+	public QuestPointReward getQuestPointReward()
+	{
+		return new QuestPointReward(2);
+	}
+
+	@Override
+	public List<ItemReward> getItemRewards()
+	{
+		return Arrays.asList(
+				new ItemReward("The book of the dead", ItemID.BOOK_OF_THE_DEAD, 1),
+				new ItemReward("Antique Lamp (10,000 Exp. Any Skill level 40 or above.", ItemID.ANTIQUE_LAMP, 1));
+	}
+
+	@Override
+	public List<UnlockReward> getUnlockRewards()
+	{
+		return Arrays.asList(
+				new UnlockReward("New respawn point in Kourend Castle."),
+				new UnlockReward("Expanded access to the Arceuus spellbook."));
 	}
 
 	@Override
@@ -888,7 +911,7 @@ public class AKingdomDivided extends BasicQuestHelper
 			talkToAllMembersInXericsLookoutSidebarTaskFinish, talkToFulloreAfterHelpingAll, watchCutsceneAfterHelpingAll,
 			talkToFulloreAfterHelpingAllAgain, talkToHosidiusXericsLookoutFinal, talkToFulloreFinalCutscene, lastCutscene, talkToFulloreToFinishQuest),
 			kharedstsMemoirs, defencePotion, darkEssenceBlock, volcanicSulphur, brokenRedirector, moltenGlass, gamesNecklace,
-			skillNecklace, combatGear, food, fairyRingStaff)
+			combatGear, food, fairyRingStaff)
 		);
 
 		return allSteps;

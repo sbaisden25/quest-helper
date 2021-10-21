@@ -39,6 +39,9 @@ import com.questhelper.requirements.ZoneRequirement;
 import com.questhelper.requirements.conditional.Conditions;
 import com.questhelper.requirements.WidgetTextRequirement;
 import com.questhelper.requirements.util.LogicType;
+import com.questhelper.rewards.ExperienceReward;
+import com.questhelper.rewards.ItemReward;
+import com.questhelper.rewards.QuestPointReward;
 import com.questhelper.steps.ConditionalStep;
 import com.questhelper.steps.DigStep;
 import com.questhelper.steps.ItemStep;
@@ -51,11 +54,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import net.runelite.api.ItemID;
-import net.runelite.api.NpcID;
-import net.runelite.api.NullObjectID;
-import net.runelite.api.ObjectID;
-import net.runelite.api.QuestState;
+
+import net.runelite.api.*;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.widgets.WidgetInfo;
 
@@ -70,9 +70,9 @@ public class FairytaleI extends BasicQuestHelper
 
 	ItemRequirement symptomsList, magicSecateurs, magicSecateursEquipped, queensSecateurs, items3, skullOrSpade;
 
-	Zone zanaris, towerF1, towerF2, grotto, tanglerootRoom;
+	Zone zanaris, towerF1, towerF2, grotto, tanglefootRoom;
 
-	Requirement inZanaris, inTowerF1, inTowerF2, inGrotto, inTanglerootRoom;
+	Requirement inZanaris, inTowerF1, inTowerF2, inGrotto, inTanglefootRoom;
 
 	Requirement talkedToFarmers, secateursNearby;
 
@@ -82,7 +82,7 @@ public class FairytaleI extends BasicQuestHelper
 
 	QuestStep talkToMortifer, getSkull, giveMortiferItems, enterGrotto, talkToSpirit;
 
-	QuestStep enterZanarisForFight, enterTanglerootRoom, killTanglefoot, pickUpSecateurs, enterZanarisForEnd,
+	QuestStep enterZanarisForFight, enterTanglefootRoom, killTanglefoot, pickUpSecateurs, enterZanarisForEnd,
 		talkToGodfatherToFinish;
 
 	@Override
@@ -124,8 +124,8 @@ public class FairytaleI extends BasicQuestHelper
 
 		ConditionalStep goKillTanglefoot = new ConditionalStep(this, enterZanarisForFight);
 		goKillTanglefoot.addStep(secateursNearby, pickUpSecateurs);
-		goKillTanglefoot.addStep(inTanglerootRoom, killTanglefoot);
-		goKillTanglefoot.addStep(inZanaris, enterTanglerootRoom);
+		goKillTanglefoot.addStep(inTanglefootRoom, killTanglefoot);
+		goKillTanglefoot.addStep(inZanaris, enterTanglefootRoom);
 		steps.put(70, goKillTanglefoot);
 
 		ConditionalStep finishQuest = new ConditionalStep(this, enterZanarisForEnd);
@@ -174,7 +174,7 @@ public class FairytaleI extends BasicQuestHelper
 		towerF1 = new Zone(new WorldPoint(2900, 3324, 1), new WorldPoint(2914, 3341, 1));
 		towerF2 = new Zone(new WorldPoint(2900, 3324, 2), new WorldPoint(2914, 3341, 2));
 		grotto = new Zone(new WorldPoint(3435, 9733, 1), new WorldPoint(3448, 9746, 1));
-		tanglerootRoom = new Zone(new WorldPoint(2368, 4353, 0), new WorldPoint(2402, 4399, 0));
+		tanglefootRoom = new Zone(new WorldPoint(2368, 4353, 0), new WorldPoint(2402, 4399, 0));
 	}
 
 	public void setupConditions()
@@ -183,7 +183,7 @@ public class FairytaleI extends BasicQuestHelper
 		inTowerF1 = new ZoneRequirement(towerF1);
 		inTowerF2 = new ZoneRequirement(towerF2);
 		inGrotto = new ZoneRequirement(grotto);
-		inTanglerootRoom = new Conditions(new InInstanceRequirement(), new ZoneRequirement(tanglerootRoom));
+		inTanglefootRoom = new Conditions(new InInstanceRequirement(), new ZoneRequirement(tanglefootRoom));
 
 		// Enter Zanaris,
 		// 1808 0->1
@@ -268,10 +268,10 @@ public class FairytaleI extends BasicQuestHelper
 		enterZanarisForFight = new ObjectStep(this, ObjectID.DOOR_2406, new WorldPoint(3202, 3169, 0),
 			"Travel to Zanaris, ready to fight the Tanglefoot.",
 					dramenOrLunarStaff, magicSecateurs);
-		enterTanglerootRoom = new ObjectStep(this, NullObjectID.NULL_11999, new WorldPoint(2399, 4379, 0),
-			"Enter the tangleroot lair in the south of Zanaris, near the cosmic altar.", magicSecateursEquipped, food);
+		enterTanglefootRoom = new ObjectStep(this, NullObjectID.NULL_11999, new WorldPoint(2399, 4379, 0),
+			"Enter the tanglefoot lair in the south of Zanaris, near the cosmic altar.", magicSecateursEquipped, food);
 		killTanglefoot = new NpcStep(this, NpcID.TANGLEFOOT, new WorldPoint(2375, 4385, 0), "Kill the large " +
-			"Tangleroot with the Magic Secateurs. You can flinch it on a corner.", magicSecateursEquipped);
+			"Tanglefoot with the Magic Secateurs. You can flinch it on a corner.", magicSecateursEquipped);
 		pickUpSecateurs = new ItemStep(this, "Pick up the queen's secateurs.", queensSecateurs);
 
 		enterZanarisForEnd = new ObjectStep(this, ObjectID.DOOR_2406, new WorldPoint(3202, 3169, 0),
@@ -309,6 +309,27 @@ public class FairytaleI extends BasicQuestHelper
 	}
 
 	@Override
+	public QuestPointReward getQuestPointReward()
+	{
+		return new QuestPointReward(2);
+	}
+
+	@Override
+	public List<ExperienceReward> getExperienceRewards()
+	{
+		return Arrays.asList(
+				new ExperienceReward(Skill.FARMING, 3500),
+				new ExperienceReward(Skill.ATTACK, 2000),
+				new ExperienceReward(Skill.MAGIC, 1000));
+	}
+
+	@Override
+	public List<ItemReward> getItemRewards()
+	{
+		return Collections.singletonList(new ItemReward("Magic Secateurs", ItemID.MAGIC_SECATEURS, 1));
+	}
+
+	@Override
 	public ArrayList<PanelDetails> getPanels()
 	{
 		ArrayList<PanelDetails> allSteps = new ArrayList<>();
@@ -321,7 +342,7 @@ public class FairytaleI extends BasicQuestHelper
 		allSteps.add(new PanelDetails("Enchanting secateurs", Arrays.asList(enterGrotto, talkToSpirit), ghostspeak, secateurs,
 			items3));
 		allSteps.add(new PanelDetails("Defeat the Tanglefoot", Arrays.asList(enterZanarisForFight,
-			enterTanglerootRoom, killTanglefoot, talkToGodfatherToFinish), dramenOrLunarStaff, magicSecateurs, food));
+			enterTanglefootRoom, killTanglefoot, talkToGodfatherToFinish), dramenOrLunarStaff, magicSecateurs, food));
 
 		return allSteps;
 	}

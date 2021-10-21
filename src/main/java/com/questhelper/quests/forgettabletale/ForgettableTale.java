@@ -41,6 +41,9 @@ import com.questhelper.requirements.quest.QuestRequirement;
 import com.questhelper.requirements.util.ItemSlots;
 import com.questhelper.requirements.util.Operation;
 import com.questhelper.requirements.var.VarbitRequirement;
+import com.questhelper.rewards.ExperienceReward;
+import com.questhelper.rewards.ItemReward;
+import com.questhelper.rewards.QuestPointReward;
 import com.questhelper.steps.ConditionalStep;
 import com.questhelper.steps.DetailedQuestStep;
 import com.questhelper.steps.NpcStep;
@@ -591,7 +594,7 @@ public class ForgettableTale extends BasicQuestHelper
 		goUpstairsPub = new ObjectStep(this, ObjectID.STAIRS_6085, new WorldPoint(2916, 10196, 0),
 			"Go upstairs in Keldagrim's east pub.");
 		buyYeast = new NpcStep(this, NpcID.BLANDEBIR, new WorldPoint(2916, 10193, 1),
-			"Buy yeast from Blandebir.", coins.quantity(25), pot);
+			"Buy yeast from Blandebir. You can get a pot from the table in the brewing room.", coins.quantity(25), pot);
 		buyYeast.addDialogSteps("Do you have any spare ale yeast?", "That's a good deal - please fill my pot with ale" +
 			" yeast for 25GP.");
 		addWater = new ObjectStep(this, NullObjectID.NULL_11670, new WorldPoint(2918, 10195, 1),
@@ -950,6 +953,26 @@ public class ForgettableTale extends BasicQuestHelper
 		req.add(new QuestRequirement(QuestHelperQuest.THE_GIANT_DWARF, QuestState.FINISHED));
 		req.add(new QuestRequirement(QuestHelperQuest.FISHING_CONTEST, QuestState.FINISHED));
 		return req;
+	}
+
+	@Override
+	public QuestPointReward getQuestPointReward()
+	{
+		return new QuestPointReward(2);
+	}
+
+	@Override
+	public List<ExperienceReward> getExperienceRewards()
+	{
+		return Arrays.asList(
+				new ExperienceReward(Skill.COOKING, 5000),
+				new ExperienceReward(Skill.FARMING, 5000));
+	}
+
+	@Override
+	public List<ItemReward> getItemRewards()
+	{
+		return Collections.singletonList(new ItemReward("Dwarven Stout (m)", ItemID.DWARVEN_STOUTM, 1));
 	}
 
 	@Override

@@ -38,6 +38,10 @@ import com.questhelper.requirements.quest.QuestRequirement;
 import com.questhelper.requirements.player.SkillRequirement;
 import com.questhelper.requirements.var.VarbitRequirement;
 import com.questhelper.requirements.ZoneRequirement;
+import com.questhelper.rewards.ExperienceReward;
+import com.questhelper.rewards.ItemReward;
+import com.questhelper.rewards.QuestPointReward;
+import com.questhelper.rewards.UnlockReward;
 import com.questhelper.steps.ConditionalStep;
 import com.questhelper.steps.DetailedQuestStep;
 import com.questhelper.steps.DigStep;
@@ -393,7 +397,7 @@ public class GhostsAhoy extends BasicQuestHelper
 		talkToAkHaranu = new NpcStep(this, NpcID.AKHARANU, new WorldPoint(3689, 3499, 0), "Talk to Ak-Haranu.");
 		talkToAkHaranu.addDialogStep("Okay, wait here - I'll get you your bow.");
 		talkToAkHaranu.addSubSteps(enterPhasForManual);
-		talkToRobin = new NpcStep(this, NpcID.ROBIN, new WorldPoint(3675, 3495, 0), "Talk to Robin the the Port Phasmatys pub. Keep playing runedraw until he agrees to sign your bow.", oakLongbow, coins400);
+		talkToRobin = new NpcStep(this, NpcID.ROBIN, new WorldPoint(3675, 3495, 0), "Talk to Robin in the Port Phasmatys pub. Keep playing runedraw until he agrees to sign your bow.", oakLongbow, coins400);
 		talkToRobin.addDialogStep("Yes, I'll give you a game.");
 		bringBowToAkHaranu = new NpcStep(this, NpcID.AKHARANU, new WorldPoint(3689, 3499, 0), "Bring the signed bow to Ak-Haranu.", signedOakBow);
 
@@ -478,6 +482,30 @@ public class GhostsAhoy extends BasicQuestHelper
 		allSteps.add(new PanelDetails("Undoing the curse", Arrays.asList(returnToCrone, talkToNecroAfterCurse, talkToVelorinaFinal), ghostspeak, book, manual, robes));
 
 		return allSteps;
+	}
+
+	@Override
+	public QuestPointReward getQuestPointReward()
+	{
+		return new QuestPointReward(2);
+	}
+
+	@Override
+	public List<ExperienceReward> getExperienceRewards()
+	{
+		return Collections.singletonList(new ExperienceReward(Skill.PRAYER, 2400));
+	}
+
+	@Override
+	public List<ItemReward> getItemRewards()
+	{
+		return Collections.singletonList(new ItemReward("Ectophial", ItemID.ECTOPHIAL, 1));
+	}
+
+	@Override
+	public List<UnlockReward> getUnlockRewards()
+	{
+		return Collections.singletonList(new UnlockReward("Free passage into Port Phasmatys"));
 	}
 
 	@Override
