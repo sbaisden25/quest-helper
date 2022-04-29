@@ -57,7 +57,9 @@ import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.VarbitChanged;
 import net.runelite.api.events.WidgetLoaded;
+import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetID;
+import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.game.ItemManager;
@@ -266,6 +268,11 @@ public abstract class QuestStep implements Module
 	public void addDialogStep(String choice)
 	{
 		choices.addChoice(new DialogChoiceStep(questHelper.getConfig(), choice));
+	}
+
+	public void resetDialogSteps()
+	{
+		choices.resetChoices();
 	}
 
 	public void addDialogStepWithExclusion(String choice, String exclusionString)

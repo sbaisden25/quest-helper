@@ -124,7 +124,8 @@ public class Wanted extends BasicQuestHelper
 		ConditionalStep goToSirAmik = new ConditionalStep(this, climbToWhiteKnightsCastleF1);
 		goToSirAmik.addStep(isInWhiteKnightsCastleF1, climbToWhiteKnightsCastleF2);
 
-		goTalkToSirAmik1 = new ConditionalStep(this, goToSirAmik, "Go tell Sir Amik Varze in the White Knights' Castle you wish to quit the White Knights.");
+		goTalkToSirAmik1 = new ConditionalStep(this, goToSirAmik, "Go tell Sir Amik Varze in the White Knights' " +
+			"Castle you wish to join the White Knights, BUT refuse to be a Squire.");
 		goTalkToSirAmik1.addStep(isInWhiteKnightsCastleF2, talkToSirAmik1);
 
 		ConditionalStep goDoAmikP1 = new ConditionalStep(this, goTalkToSirAmik1);
@@ -256,12 +257,12 @@ public class Wanted extends BasicQuestHelper
 		ItemRequirement moltenGlass = new ItemRequirement("Molten glass", ItemID.MOLTEN_GLASS, 1);
 		commorbComponents = new ItemRequirements("A law rune, an enchanted gem and some molten glass", lawRune, enchantedGem, moltenGlass);
 		commorbComponents.setTooltip("Alternatively, you can bring 10k gp.");
-		tenThousandGp = new ItemRequirement("10k gp", ItemID.COINS_995, 10000);
+		tenThousandGp = new ItemRequirement("10k gp", ItemCollections.getCoins(), 10000);
 		commorbComponentsOrTenThousandGp = new ItemRequirements(LogicType.OR, "A law rune, an enchanted gem and some molten glass OR 10k gp", commorbComponents, tenThousandGp);
 		
-		runeEssence = new ItemRequirement("Rune Essence (UNNOTED)", ItemID.RUNE_ESSENCE, 20);
-		pureEssence = new ItemRequirement("Pure Essence (UNNOTED)", ItemID.PURE_ESSENCE, 20);
-		essence =  new ItemRequirements(LogicType.OR, "Rune or Pure Essence (UNNOTED)", runeEssence, pureEssence);
+		runeEssence = new ItemRequirement("20 Rune Essence (UNNOTED)", ItemID.RUNE_ESSENCE, 20);
+		pureEssence = new ItemRequirement("20 Pure Essence (UNNOTED)", ItemID.PURE_ESSENCE, 20);
+		essence =  new ItemRequirements(LogicType.OR, "20 Rune or Pure Essence (UNNOTED)", runeEssence, pureEssence);
 		lightSource = new ItemRequirement("A light source", ItemCollections.getLightSources());
 		rope = new ItemRequirement("A rope", ItemID.ROPE);
 
@@ -412,10 +413,10 @@ public class Wanted extends BasicQuestHelper
 		talkToSirTiffy3.addDialogStep(TEXT_ASK_ABOUT_WANTED_QUEST);
 
 		getCommorbWithGp = new NpcStep(this, NpcID.SIR_TIFFY_CASHIEN, locationSirTaffy, "Get a Commorb from Sir Tiffy Cashien in Falador Park.");
-		getCommorbWithGp.addDialogSteps(TEXT_ASK_ABOUT_WANTED_QUEST, "YES");
+		getCommorbWithGp.addDialogSteps(TEXT_ASK_ABOUT_WANTED_QUEST, "Buy One", "YES");
 
 		getCommorbWithComponents = new NpcStep(this, NpcID.SIR_TIFFY_CASHIEN, locationSirTaffy, "Get a Commorb from Sir Tiffy Cashien in Falador Park.");
-		getCommorbWithComponents.addDialogSteps(TEXT_ASK_ABOUT_WANTED_QUEST, "YES");
+		getCommorbWithComponents.addDialogSteps(TEXT_ASK_ABOUT_WANTED_QUEST, "Have One Made", "YES");
 
 		doNotGetCommorbWithGp = new NpcStep(this, NpcID.SIR_TIFFY_CASHIEN, locationSirTaffy, "Get a Commorb from Sir Tiffy Cashien in Falador Park.");
 		doNotGetCommorbWithGp.addDialogSteps(TEXT_ASK_ABOUT_WANTED_QUEST, "NO");
@@ -444,7 +445,7 @@ public class Wanted extends BasicQuestHelper
 			"Talk to the Mage of Zamorak in south east Varrock.", commorb);
 		talkToMageOfZamorak.addDialogStep("Solus Dellagar");
 		giveEssenceToMageOfZamorak = new NpcStep(this, NpcID.MAGE_OF_ZAMORAK_2582, new WorldPoint(3258, 3388, 0),
-			"Bring the rune or pure essence to the Mage of Zamorak in Varrock.", commorb, essence);
+			"Bring the 20 rune or pure essence to the Mage of Zamorak in Varrock.", commorb, essence);
 		giveEssenceToMageOfZamorak.addDialogStep("Solus Dellagar");
 
 		// Hunt for Solus

@@ -73,7 +73,7 @@ public class KandarinMedium extends ComplexStateQuestHelper
 
 	Requirement notBarbAgi, notSuperAnti, notEnterRange, notGrapOb, notCatchCookBass, notTPCam,
 		notStringMaple, notPickLimp, notMindHelm, notFireGiant, notBarbAss, notStealHemen, notTravelMcGrubor,
-		notMineCoal, limpReady, limpGrowing, notLimpGrowing, not70Agility;
+		notMineCoal, not70Agility;
 
 	Requirement normalBook;
 
@@ -119,8 +119,7 @@ public class KandarinMedium extends ComplexStateQuestHelper
 		doMedium.addStep(notBarbAss, barbAss);
 		doMedium.addStep(notTravelMcGrubor, travelMcGrubor);
 		doMedium.addStep(notTPCam, tpCAM);
-
-		doMedium.addStep(new Conditions(notPickLimp), plantAndPickLimp);
+		doMedium.addStep(notPickLimp, plantAndPickLimp);
 
 		return doMedium;
 	}
@@ -144,11 +143,7 @@ public class KandarinMedium extends ComplexStateQuestHelper
 
 		not70Agility = new Conditions(LogicType.NOR, new SkillRequirement(Skill.AGILITY, 70, true));
 
-		limpReady = new VarbitRequirement(4957, 0);
-		limpGrowing = new VarbitRequirement(4957, 4, Operation.GREATER_EQUAL);
-		notLimpGrowing = new VarbitRequirement(4957, 3, Operation.LESS_EQUAL);
-
-		mithGrap = new ItemRequirement("Mithril grapple", ItemID.MITH_GRAPPLE_9419).showConditioned(notGrapOb);
+		mithGrap = new ItemRequirement("Mith grapple", ItemID.MITH_GRAPPLE_9419).showConditioned(notGrapOb);
 		crossbow = new ItemRequirement("Any crossbow", ItemCollections.getCrossbows()).showConditioned(notGrapOb);
 		unfIrit = new ItemRequirement("Unfinished Irit potion", ItemID.IRIT_POTION_UNF, 1).showConditioned(notSuperAnti);
 		unicornHorn = new ItemRequirement("Unicorn horn", ItemID.UNICORN_HORN, 1).showConditioned(notSuperAnti);
@@ -252,11 +247,10 @@ public class KandarinMedium extends ComplexStateQuestHelper
 		superAnti = new DetailedQuestStep(this,
 			"Create a super antipoision potion.", hornDust.highlighted(), unfIrit.highlighted());
 		plantAndPickLimp = new ObjectStep(this, NullObjectID.NULL_7848, new WorldPoint(2810, 3464, 0),
-			"Plant a limpwurt seed in the Catherby Allotment Patch, wait for it to grow then pick it.", rake,
+			"Plant a limpwurt seed in the Catherby Flower Patch, wait for it to grow then pick it.", rake,
 			limpSeed, seedDib);
-		catchBass = new NpcStep(this, NpcID.FISHING_SPOT_1518, new WorldPoint(2837, 3431, 0),
+		catchBass = new NpcStep(this, NpcID.FISHING_SPOT_1520, new WorldPoint(2837, 3431, 0),
 			"Catch a bass.", bigFishingNet);
-		catchBass.addAlternateNpcs(NpcID.FISHING_SPOT_1520);
 		cookBass = new ObjectStep(this, ObjectID.RANGE_26181, new WorldPoint(2818, 3444, 0),
 			"Cook the bass on the ranged in Catherby.", rawBass);
 		travelMcGrubor = new DetailedQuestStep(this, "Take a fairy ring to McGrubor's Woods (ALS)", staff.equipped());
@@ -298,10 +292,6 @@ public class KandarinMedium extends ComplexStateQuestHelper
 		setupGeneralRequirements();
 
 		ArrayList<Requirement> req = new ArrayList<>();
-		req.add(alfredBar);
-		req.add(eleWorkII);
-		req.add(waterfallQuest);
-		req.add((fairyTaleII));
 		req.add(new SkillRequirement(Skill.AGILITY, 36));
 		req.add(new SkillRequirement(Skill.COOKING, 43));
 		req.add(new SkillRequirement(Skill.FARMING, 26));
@@ -313,6 +303,12 @@ public class KandarinMedium extends ComplexStateQuestHelper
 		req.add(new SkillRequirement(Skill.RANGED, 40));
 		req.add(new SkillRequirement(Skill.STRENGTH, 22));
 		req.add(new SkillRequirement(Skill.THIEVING, 47));
+
+		req.add(alfredBar);
+		req.add(eleWorkII);
+		req.add(waterfallQuest);
+		req.add(fairyTaleII);
+
 		return req;
 	}
 

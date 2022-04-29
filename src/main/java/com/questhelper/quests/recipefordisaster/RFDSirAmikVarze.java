@@ -156,10 +156,9 @@ public class RFDSirAmikVarze extends BasicQuestHelper
 		{
 			macheteAndRadimus = new ItemRequirements("Machete and Radimus notes",
 				machete, radimusNotes);
-			macheteAndRadimus.addAlternates(ItemID.RED_TOPAZ_MACHETE, ItemID.OPAL_MACHETE, ItemID.JADE_MACHETE);
 		}
 		vanillaPod = new ItemRequirement("Vanilla pod", ItemID.VANILLA_POD);
-		vanillaPod.setTooltip("You can get a pod from the Khazari Jungle. Bring an axe and machete to get in");
+		vanillaPod.setTooltip("You can get a pod from the Kharazi Jungle. Bring an axe and machete to get in");
 		vanillaPod.setHighlightInInventory(true);
 
 		dramenStaffOrLunar = new ItemRequirement("Dramen/lunar staff", ItemID.DRAMEN_STAFF, 1, true);
@@ -177,8 +176,8 @@ public class RFDSirAmikVarze extends BasicQuestHelper
 		iceGloves.setTooltip("Although optional, you'll take a lot of damage if you're not wearing them");
 		rawChicken = new ItemRequirement("Raw chicken", ItemID.RAW_CHICKEN);
 		rawChicken.setHighlightInInventory(true);
-		antidragonShield = new ItemRequirement("Anti-dragon shield", ItemID.ANTIDRAGON_SHIELD);
-		antifirePotion = new ItemRequirement("Antifire potion", ItemID.ANTIFIRE_POTION4);
+		antidragonShield = new ItemRequirement("Anti-dragon shield", ItemCollections.getAntifireShields());
+		antifirePotion = new ItemRequirement("Antifire potion", ItemCollections.getAntifire());
 		combatGear = new ItemRequirement("Combat gear", -1, -1);
 		combatGear.setDisplayItemId(BankSlotIcons.getCombatGear());
 
@@ -254,7 +253,7 @@ public class RFDSirAmikVarze extends BasicQuestHelper
 		useChickenOnShrine = new ObjectStep(this, ObjectID.CHICKEN_SHRINE, new WorldPoint(2453, 4477, 0),
 			"Use a raw chicken on the Chicken Shrine in the north east of Zanaris.", rawChicken, combatGear);
 		useChickenOnShrine.addIcon(ItemID.RAW_CHICKEN);
-		killEvilChicken = new NpcStep(this, NpcID.EVIL_CHICKEN, new WorldPoint(2455, 4399, 0), "Kill the Evil Chicken in the north of the range.");
+		killEvilChicken = new NpcStep(this, NpcID.EVIL_CHICKEN, new WorldPoint(2455, 4399, 0), "Kill the Evil Chicken in the north of the range. Pray protect from magic against it.");
 		pickUpEgg = new ItemStep(this, "Pick up the evil chicken egg.", evilEgg);
 		useEggOnBrulee = new DetailedQuestStep(this, "Use the evil chickens egg on the brulee.", evilEgg, baseBrulee, pestleAndMortar);
 		killBlackDragon = new NpcStep(this, NpcID.BLACK_DRAGON, new WorldPoint(2461, 4367, 0), "Kill a black dragon.", combatGear, antidragonShield);
@@ -321,7 +320,7 @@ public class RFDSirAmikVarze extends BasicQuestHelper
 	@Override
 	public List<String> getCombatRequirements()
 	{
-		return Arrays.asList("Evil Chicken (level " + evilChickenLevel + ")", "Black dragon (level 227)");
+		return Arrays.asList("Evil Chicken (level " + evilChickenLevel + ")", "Black dragon (level 227) (Can be safespotted)");
 	}
 
 	@Override
@@ -330,7 +329,7 @@ public class RFDSirAmikVarze extends BasicQuestHelper
 		ArrayList<Requirement> req = new ArrayList<>();
 		req.add(new QuestPointRequirement(107));
 		req.add(new VarplayerRequirement(QuestVarPlayer.QUEST_LEGENDS_QUEST.getId(), 1, Operation.GREATER_EQUAL,
-			"Started Legends' Quest to access the Khazari Jungle"));
+			"Started Legends' Quest to access the Kharazi Jungle"));
 		req.add(new QuestRequirement(QuestHelperQuest.FAMILY_CREST, QuestState.FINISHED));
 		req.add(new QuestRequirement(QuestHelperQuest.HEROES_QUEST, QuestState.FINISHED));
 		req.add(new QuestRequirement(QuestHelperQuest.SHILO_VILLAGE, QuestState.FINISHED));

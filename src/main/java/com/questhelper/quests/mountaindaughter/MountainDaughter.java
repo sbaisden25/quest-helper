@@ -73,8 +73,10 @@ public class MountainDaughter extends BasicQuestHelper
 	//Items Recommended
 	private ItemRequirement slayerRing, combatGear;
 
-	private Conditions onIsland1, onIsland2, onIsland3, inTheCamp, askedAboutDiplomacy, askedAboutFoodAndDiplomacy, spokenToSvidi, spokenToBrundt, minedRock,
-		gottenGuarantee, givenGuaranteeToSvidi, finishedDiplomacy, finishedFoodAndDiplomacy, inKendalCave, fightableKendalNearby, hasBuried, rubbedMudIntoTree;
+	private Requirement onIsland1, onIsland2, onIsland3, inTheCamp, askedAboutDiplomacy, askedAboutFoodAndDiplomacy,
+		spokenToSvidi, spokenToBrundt, minedRock,
+		gottenGuarantee, givenGuaranteeToSvidi, finishedDiplomacy, finishedFood, finishedFoodAndDiplomacy, inKendalCave,
+		fightableKendalNearby, hasBuried, rubbedMudIntoTree;
 
 	private QuestStep enterCamp, enterCampOverRocks, talkToHamal, digUpMud, rubMudIntoTree, climbTree, poleVaultRocks, plankRocks, listenToSpirit,
 		plankRocksReturn, talkToHamalAfterSpirit, talkToJokul, talkToSvidi, speakToBrundt, getRockFragment, returnToBrundt, returnToSvidi, getFruit,
@@ -111,10 +113,14 @@ public class MountainDaughter extends BasicQuestHelper
 
 		ConditionalStep helpTheCamp = new ConditionalStep(this, enterCampOverRocks);
 		helpTheCamp.addStep(finishedFoodAndDiplomacy, returnToSpirit);
-		helpTheCamp.addStep(finishedDiplomacy, returnToHamalAboutFood);
-		helpTheCamp.addStep(whitePearlSeed.alsoCheckBank(questBank), returnToHamalAboutDiplomacy);
-		helpTheCamp.addStep(whitePearl.alsoCheckBank(questBank), eatFruit);
+		helpTheCamp.addStep(new Conditions(givenGuaranteeToSvidi, finishedFood), returnToHamalAboutDiplomacy);
+
+		// Get fruit
+		helpTheCamp.addStep(new Conditions(givenGuaranteeToSvidi, whitePearlSeed.alsoCheckBank(questBank)), returnToHamalAboutFood);
+		helpTheCamp.addStep(new Conditions(givenGuaranteeToSvidi, whitePearl.alsoCheckBank(questBank)), eatFruit);
 		helpTheCamp.addStep(givenGuaranteeToSvidi, getFruit);
+
+		// Fremennik friendship
 		helpTheCamp.addStep(gottenGuarantee, returnToSvidi);
 		helpTheCamp.addStep(minedRock, returnToBrundt);
 		helpTheCamp.addStep(spokenToBrundt, getRockFragment);
@@ -174,10 +180,10 @@ public class MountainDaughter extends BasicQuestHelper
 		pickaxe = new ItemRequirement("Any pickaxe", ItemID.BRONZE_PICKAXE);
 		pickaxe.addAlternates(ItemCollections.getPickaxes());
 
-		axe = new ItemRequirement("Any axe", ItemID.BRONZE_AXE);
-		axe.addAlternates(ItemCollections.getAxes());
-		plank = new ItemRequirement("Plank", ItemID.PLANK);
-		pole = new ItemRequirement("A staff or a Pole", ItemID.POLE);
+		axe = new ItemRequirement("Any axe", ItemCollections.getAxes());
+		plank = new ItemRequirement("Any plank", ItemID.PLANK);
+		plank.addAlternates(ItemID.OAK_PLANK, ItemID.TEAK_PLANK, ItemID.MAHOGANY_PLANK);
+		pole = new ItemRequirement("A staff or a pole", ItemID.POLE);
 		pole.addAlternates(ItemID.LUNAR_STAFF);
 		pole.setTooltip("You can find one in the north part of the Mountain Camp.");
 		gloves = new ItemRequirement("Almost any gloves", ItemID.LEATHER_GLOVES);
@@ -226,7 +232,8 @@ public class MountainDaughter extends BasicQuestHelper
 		gottenGuarantee = new Conditions(new VarbitRequirement(262, 50), askedAboutFood);
 		givenGuaranteeToSvidi = new Conditions(new VarbitRequirement(262, 60), askedAboutFood);
 		finishedDiplomacy = new Conditions(new VarbitRequirement(266, 1));
-		finishedFoodAndDiplomacy = new Conditions(new VarbitRequirement(266, 1), new VarbitRequirement(263, 20));
+		finishedFood = new VarbitRequirement(263, 20);
+		finishedFoodAndDiplomacy = new Conditions(finishedDiplomacy, finishedFood);
 		inKendalCave = new Conditions(new ZoneRequirement(KENDAL_CAVE));
 		fightableKendalNearby = new Conditions(new NpcHintArrowRequirement(NpcID.THE_KENDAL_1378));
 
@@ -318,7 +325,7 @@ public class MountainDaughter extends BasicQuestHelper
 			"Go to the top of White Wolf Mountain and pick the Thorny Bushes whilst wearing gloves.",
 			gloves);
 
-		eatFruit = new DetailedQuestStep(this, "Eat the White Pearl.", whitePearl);
+		eatFruit = new DetailedQuestStep(this, "Eat the White Pearl.", whitePearl.highlighted());
 
 		returnToHamalAboutDiplomacy = new NpcStep(this, NpcID.HAMAL_THE_CHIEFTAIN, new WorldPoint(2810, 3672, 0),
 			"Return to Hamal the Chieftain in the Mountain Camp.",
@@ -362,7 +369,7 @@ public class MountainDaughter extends BasicQuestHelper
 		bringCorpseToHamal.addDialogStep("But he's not a god!");
 		bringCorpseToHamal.addDialogStep("I will.");
 
-		collectRocks = new DetailedQuestStep(this, "Collect Muddy Rocks from around the camp.", muddyRocks);
+		collectRocks = new DetailedQuestStep(this, "Collect 5 Muddy Rocks from around the camp.", muddyRocks);
 
 		speakRagnar = new NpcStep(this, NpcID.RAGNAR, new WorldPoint(2766, 3676, 0),
 			"Speak to Ragnar.",

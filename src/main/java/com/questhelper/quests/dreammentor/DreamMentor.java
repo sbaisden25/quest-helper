@@ -68,7 +68,7 @@ public class DreamMentor extends BasicQuestHelper
 {
 	//Items Required
 	ItemRequirement sealOfPassage, dreamVial, astralRune, astralRuneShards, groundAstralRune, dreamVialWater, dreamVialWithGoutweed,
-		pestleAndMortar, dreamPotion, foodAll, food4, food6, goutweed, tinderbox, hammer, combatGear, food14, chest;
+		pestleAndMortar, dreamPotion, foodAll1, foodAll2, foodAll3, food4, food6, goutweed, tinderbox, hammer, combatGear, food14, chest;
 
 	Requirement inLunarMine, inCyrisusRoom, at40Health, at70Health, lookingAtBank, gotItems, cyrisusDressed, at100Health, litBrazier,
 		inArena, unlockedDream, inadaquacyNearby, everlastingNearby, untouchableNearby, illusiveNearby;
@@ -191,8 +191,12 @@ public class DreamMentor extends BasicQuestHelper
 
 		dreamPotion = new ItemRequirement("Dream potion", ItemID.DREAM_POTION);
 
-		foodAll = new ItemRequirement("3 different types of food, 7 of two and 6 of one", -1, 20);
-		foodAll.setDisplayItemId(BankSlotIcons.getFood());
+		foodAll1 = new ItemRequirement("7 of one type of food", -1, 7);
+		foodAll1.setDisplayItemId(BankSlotIcons.getFood());
+		foodAll2 = new ItemRequirement("7 of another type of food", -1, 7);
+		foodAll2.setDisplayItemId(BankSlotIcons.getFood());
+		foodAll3 = new ItemRequirement("6 of a third type of food", -1, 6);
+		foodAll3.setDisplayItemId(BankSlotIcons.getFood());
 		food14 = new ItemRequirement("food, 5x of 2 different types of food, and 4x of another", -1, 14);
 		food14.setDisplayItemId(BankSlotIcons.getFood());
 		food4 = new ItemRequirement("food, 1x of 2 different types of food, and 2x of another", -1, 4);
@@ -245,7 +249,7 @@ public class DreamMentor extends BasicQuestHelper
 		goDownToCyrisus = new ObjectStep(this, ObjectID.LADDER_14996, new WorldPoint(2142, 3944, 0), "Enter the mine in the north east of Lunar Isle.", food14);
 		enterCyrisusCave = new ObjectStep(this, ObjectID.CAVE_ENTRANCE_11399, new WorldPoint(2335, 10346, 2), "Enter the cave entrance on the north wall.");
 		talkToCyrisus = new NpcStep(this, NpcID.FALLEN_MAN, new WorldPoint(2346, 10360, 2), "Attempt to talk to the fallen man.");
-		talkToCyrisus.addDialogStep("Yes");
+		talkToCyrisus.addDialogStep("Yes.");
 
 		feed4Food = new NpcStep(this, NpcID.FALLEN_MAN, new WorldPoint(2346, 10360, 2), "Feed the fallen man 4 food. You'll need to alternate between at least 3 different types of food.", food4);
 
@@ -289,8 +293,9 @@ public class DreamMentor extends BasicQuestHelper
 		talkToCyrisus4.addDialogSteps("You're very safe in this little cave.", "The suqah will never fit through that tunnel.");
 		talkToCyrisus4.addDialogSteps("Tell me a bit about yourself.", "Fishing!");
 
-		leaveCave = new ObjectStep(this, ObjectID.CAVE_ENTRANCE_11399, new WorldPoint(2346, 10360, 2), "Talk to 'Bird's-Eye' Jack in the Lunar Isle bank.");
-		goUpToSurface = new ObjectStep(this, ObjectID.LADDER_14995, new WorldPoint(2330, 10353, 2), "Talk to 'Bird's-Eye' Jack in the Lunar Isle bank.");
+		leaveCave = new ObjectStep(this, ObjectID.CAVE_ENTRANCE_11399, new WorldPoint(12437, 2955, 0),
+			"Talk to 'Bird's-Eye' Jack in the Lunar Isle bank.", sealOfPassage);
+		goUpToSurface = new ObjectStep(this, ObjectID.LADDER_14995, new WorldPoint(2330, 10353, 2), "Talk to 'Bird's-Eye' Jack in the Lunar Isle bank.", sealOfPassage);
 		selectEquipment = new SelectingCombatGear(this);
 		talkToJack = new NpcStep(this, NpcID.BIRDSEYE_JACK, new WorldPoint(2099, 3921, 0),
 			"Talk to 'Bird's-Eye' Jack in the Lunar Isle bank for Cyrisus's equipment.", sealOfPassage);
@@ -344,7 +349,7 @@ public class DreamMentor extends BasicQuestHelper
 		useGroundAstralOnVial = new DetailedQuestStep(this, "Add the ground astral rune to the dream vial.", groundAstralRune, dreamVialWithGoutweed);
 		lightBrazier = new ObjectStep(this, NullObjectID.NULL_17025, new WorldPoint(2073, 3912, 0),
 			"Equip your combat equipment, food, and light the Brazier in the west of Lunar Isle's town. The upcoming fight is hard, and you can only leave via the lecturn in the arena and cannot pray. Magic attacks are extremely effective for the fight.",
-			sealOfPassage, tinderbox, combatGear);
+			sealOfPassage, tinderbox.highlighted(), combatGear);
 		lightBrazier.addIcon(ItemID.TINDERBOX);
 
 		talkToCyrisusForDream = new NpcStep(this, NpcID.CYRISUS_3468, new WorldPoint(2075, 3912, 0), "Talk to Cyrisus to enter the dream.", combatGear, sealOfPassage);
@@ -361,7 +366,7 @@ public class DreamMentor extends BasicQuestHelper
 	@Override
 	public List<ItemRequirement> getItemRequirements()
 	{
-		return Arrays.asList(sealOfPassage, foodAll, goutweed, astralRune, hammer, pestleAndMortar, tinderbox, combatGear);
+		return Arrays.asList(sealOfPassage, foodAll1, foodAll2, foodAll3, goutweed, astralRune, hammer, pestleAndMortar, tinderbox, combatGear);
 	}
 
 	@Override
@@ -410,7 +415,7 @@ public class DreamMentor extends BasicQuestHelper
 		List<PanelDetails> allSteps = new ArrayList<>();
 		allSteps.add(new PanelDetails("Helping Cyrisus", Arrays.asList(goDownToCyrisus, enterCyrisusCave,
 			talkToCyrisus, feed4Food, talkToCyrisus2, feed4Food2, talkToCyrisus3, feed6Food, talkToCyrisus4, talkToJack, giveCyrisusGear,
-			useFood3, supportCyrisusToRecovery), foodAll, sealOfPassage));
+			useFood3, supportCyrisusToRecovery), foodAll1, foodAll2, foodAll3, sealOfPassage));
 		allSteps.add(new PanelDetails("Defeating his fear", Arrays.asList(talkToOneiromancer, fillVialWithWater, addGoutweed,
 			useHammerOnAstralRune, usePestleOnShards, useGroundAstralOnVial, lightBrazier, talkToCyrisusForDream, killInadaquacy,
 			killEverlasting, killUntouchable, killIllusive, returnToOneiromancer), sealOfPassage, goutweed, astralRune, hammer,

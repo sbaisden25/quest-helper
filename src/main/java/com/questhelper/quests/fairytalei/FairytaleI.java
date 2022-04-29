@@ -207,7 +207,7 @@ public class FairytaleI extends BasicQuestHelper
 
 		talkedToFarmers = new Conditions(true, LogicType.OR,
 			new WidgetTextRequirement(119, 3, true, "back and talk to <col=800000>Martin"),
-			new WidgetTextRequirement(217, 4, "Right, well thanks for your input."),
+			new WidgetTextRequirement(WidgetInfo.DIALOG_PLAYER_TEXT, "Right, well thanks for your input."),
 			new WidgetTextRequirement(WidgetInfo.DIALOG_NPC_TEXT, "I don't think the crops ARE failing"));
 
 		secateursNearby = new ItemOnTileRequirement(queensSecateurs);
@@ -224,7 +224,7 @@ public class FairytaleI extends BasicQuestHelper
 		talkToFarmers.addText("Elstan north west of Draynor.");
 		talkToFarmers.addText("Heskel in Falador Park.");
 		talkToFarmers.addText("Treznor south of Varrock Castle.");
-		talkToFarmers.addText(" Dreven south of Varrock.");
+		talkToFarmers.addText("Dreven south of Varrock, next to the Champions' Guild.");
 		talkToFarmers.addDialogStep("Are you a member of the Group of Advanced Gardeners?");
 		((NpcStep) (talkToFarmers)).addAlternateNpcs(NpcID.FRIZZY_SKERNIP, NpcID.HESKEL, NpcID.DREVEN, NpcID.FAYETH,
 			NpcID.TREZNOR);
