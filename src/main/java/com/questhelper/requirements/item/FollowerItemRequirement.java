@@ -26,7 +26,7 @@
  */
 package com.questhelper.requirements.item;
 
-import com.questhelper.requirements.item.ItemRequirement;
+import com.questhelper.collections.ItemCollections;
 import java.util.List;
 import net.runelite.api.Client;
 import net.runelite.api.Item;
@@ -34,11 +34,26 @@ import net.runelite.api.Item;
 public class FollowerItemRequirement extends ItemRequirement
 {
 	private final List<Integer> followerIDs;
+	private final List<Integer> itemIDs;
 
 	public FollowerItemRequirement(String name, List<Integer> itemIDs, List<Integer> followerIDs)
 	{
 		super(name, itemIDs);
+		this.itemIDs = itemIDs;
 		this.followerIDs = followerIDs;
+	}
+
+	public FollowerItemRequirement(String name, ItemCollections itemIDs, List<Integer> followerIDs)
+	{
+		super(name, itemIDs);
+		this.itemIDs = itemIDs.getItems();
+		this.followerIDs = followerIDs;
+	}
+
+	@Override
+	protected FollowerItemRequirement copyOfClass()
+	{
+		return new FollowerItemRequirement(getName(), itemIDs, followerIDs);
 	}
 
 	@Override

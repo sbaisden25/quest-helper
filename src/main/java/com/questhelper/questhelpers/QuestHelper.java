@@ -28,15 +28,18 @@ import com.google.inject.Binder;
 import com.google.inject.CreationException;
 import com.google.inject.Injector;
 import com.google.inject.Module;
-import com.questhelper.ExternalQuestResources;
-import com.questhelper.QuestBank;
+import com.questhelper.questinfo.ExternalQuestResources;
+import com.questhelper.questinfo.HelperConfig;
+import com.questhelper.bank.QuestBank;
 import com.questhelper.QuestHelperConfig;
 import com.questhelper.QuestHelperPlugin;
-import com.questhelper.QuestHelperQuest;
+import com.questhelper.questinfo.QuestHelperQuest;
 import com.questhelper.panel.PanelDetails;
 import com.questhelper.requirements.item.ItemRequirement;
 import com.questhelper.requirements.Requirement;
+import com.questhelper.runeliteobjects.extendedruneliteobjects.RuneliteObjectManager;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -69,6 +72,9 @@ public abstract class QuestHelper implements Module, QuestDebugRenderer
 	protected ConfigManager configManager;
 
 	@Inject
+	protected RuneliteObjectManager runeliteObjectManager;
+
+	@Inject
 	protected QuestBank questBank;
 
 	@Getter
@@ -88,19 +94,34 @@ public abstract class QuestHelper implements Module, QuestDebugRenderer
 	@Setter
 	private Injector injector;
 
+	@Setter
+	@Getter
+	protected QuestHelperPlugin questHelperPlugin;
 
 	@Override
 	public void configure(Binder binder)
 	{
 	}
 
+	public abstract void init();
+
 	public abstract void startUp(QuestHelperConfig config);
 
-	public abstract void shutDown();
+	public void shutDown()
+	{
+		removeRuneliteObjects();
+	}
+
+	public void removeRuneliteObjects()
+	{
+		runeliteObjectManager.removeGroupAndSubgroups(toString());
+	}
 
 	public abstract boolean updateQuest();
 
-	public void debugStartup(QuestHelperConfig config) {}
+	public void debugStartup(QuestHelperConfig config)
+	{
+	}
 
 	protected void startUpStep(QuestStep step)
 	{
@@ -160,7 +181,7 @@ public abstract class QuestHelper implements Module, QuestDebugRenderer
 
 	public QuestState getState(Client client)
 	{
-		return quest.getState(client);
+		return quest.getState(client, configManager);
 	}
 
 	public boolean clientMeetsRequirements()
@@ -177,7 +198,10 @@ public abstract class QuestHelper implements Module, QuestDebugRenderer
 	@Override
 	public void renderDebugOverlay(Graphics graphics, QuestHelperPlugin plugin, PanelComponent panelComponent)
 	{
-		if (!plugin.isDeveloperMode()) return;
+		if (!plugin.isDeveloperMode())
+		{
+			return;
+		}
 		panelComponent.getChildren().add(LineComponent.builder()
 			.left("Quest")
 			.leftColor(ColorScheme.BRAND_ORANGE_TRANSPARENT)
@@ -198,6 +222,13 @@ public abstract class QuestHelper implements Module, QuestDebugRenderer
 	{
 		return quest.getVar(client);
 	}
+
+	public void makeWorldOverlayHint(Graphics2D graphics, QuestHelperPlugin plugin)
+	{
+
+	}
+
+	public abstract void setupRequirements();
 
 	public List<ItemRequirement> getItemRequirements()
 	{
@@ -284,7 +315,15 @@ public abstract class QuestHelper implements Module, QuestDebugRenderer
 		return rewards;
 	}
 
-	public List<ExternalQuestResources> getExternalResources(){ return null; }
+	public List<ExternalQuestResources> getExternalResources()
+	{
+		return null;
+	}
+
+	public List<HelperConfig> getConfigs()
+	{
+		return null;
+	}
 
 	public abstract List<PanelDetails> getPanels();
 }

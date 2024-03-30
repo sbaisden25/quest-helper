@@ -24,7 +24,6 @@
  *  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-
 package com.questhelper.requirements;
 
 import com.questhelper.QuestHelperConfig;
@@ -34,6 +33,7 @@ import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import net.runelite.api.Client;
+import net.runelite.client.config.ConfigManager;
 import net.runelite.client.ui.overlay.components.LineComponent;
 
 /**
@@ -49,6 +49,16 @@ public interface Requirement
 	 * @return true if the client meets this requirement
 	 */
 	boolean check(Client client);
+
+	default boolean checkWithConfigChange(Client client, ConfigManager configManager, String configName, String value)
+	{
+		if (check(client))
+		{
+			configManager.setRSProfileConfiguration(QuestHelperConfig.QUEST_HELPER_GROUP, configName, value);
+			return true;
+		}
+		return false;
+	}
 
 	/**
 	 * @return whether the requirement should be considered for filtering in the sidebar
@@ -95,15 +105,33 @@ public interface Requirement
 	 * @param tooltip the new tooltip
 	 */
 	default void setTooltip(@Nullable String tooltip) {}
+	
+	/**
+	 * If a custom suffix has been set it will be used
+	 * over the default ItemID.
+	 *
+	 * @return custom url
+	 */
+	@Nullable
+	default String getUrlSuffix()
+	{
+		return null;
+	}
+	
+	/**
+	 * Set the suffix of the URL to the argument provided,
+	 *  overrides the url set from the ItemID.
+	 *
+	 * @param urlSuffix the new url
+	 */
+	default void setUrlSuffix(@Nullable String urlSuffix) {}
+	
 
 	default List<LineComponent> getDisplayTextWithChecks(Client client, QuestHelperConfig config)
 	{
 		List<LineComponent> lines = new ArrayList<>();
 
-		if (shouldDisplayText(client))
-		{
-			return lines;
-		}
+		if (!shouldDisplayText(client)) return lines;
 
 		String text = getDisplayText();
 		Color color = getColor(client, config);

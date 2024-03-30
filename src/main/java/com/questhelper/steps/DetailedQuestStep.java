@@ -27,17 +27,20 @@ package com.questhelper.steps;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.inject.Inject;
+import com.questhelper.bank.QuestBank;
 import com.questhelper.QuestHelperPlugin;
-import com.questhelper.QuestHelperWorldMapPoint;
-import com.questhelper.QuestTile;
+import com.questhelper.tools.QuestHelperWorldMapPoint;
+import com.questhelper.tools.QuestTile;
 import com.questhelper.questhelpers.QuestHelper;
-import com.questhelper.requirements.item.ItemRequirement;
 import com.questhelper.requirements.Requirement;
+import com.questhelper.requirements.item.ItemRequirement;
 import com.questhelper.steps.overlay.DirectionArrow;
 import com.questhelper.steps.overlay.WorldLines;
 import com.questhelper.steps.tools.QuestPerspective;
+import com.questhelper.util.worldmap.WorldMapAreaChanged;
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.Polygon;
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
@@ -49,6 +52,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.Setter;
 import net.runelite.api.GameState;
 import net.runelite.api.Perspective;
@@ -63,24 +67,26 @@ import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.ItemDespawned;
 import net.runelite.api.events.ItemSpawned;
+import net.runelite.api.widgets.ComponentID;
 import net.runelite.api.widgets.Widget;
-import net.runelite.api.widgets.WidgetInfo;
-import net.runelite.api.widgets.WidgetItem;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.ui.overlay.OverlayUtil;
 import net.runelite.client.ui.overlay.components.LineComponent;
 import net.runelite.client.ui.overlay.components.PanelComponent;
 import net.runelite.client.ui.overlay.worldmap.WorldMapPointManager;
+import net.runelite.client.util.ColorUtil;
+import net.runelite.client.util.ImageUtil;
 
 public class DetailedQuestStep extends QuestStep
 {
 	@Inject
 	WorldMapPointManager worldMapPointManager;
 
-	protected WorldPoint worldPoint;
+	@Inject
+	private QuestBank questBank;
 
-	@Setter
-	protected WorldPoint worldMapPoint;
+	@Getter
+	protected WorldPoint worldPoint;
 
 	@Setter
 	protected List<WorldPoint> linePoints;
@@ -92,6 +98,12 @@ public class DetailedQuestStep extends QuestStep
 
 	@Getter
 	protected final List<Requirement> requirements = new ArrayList<>();
+
+	@Getter
+	protected final List<Requirement> recommended = new ArrayList<>();
+
+	@Getter
+	protected final List<Requirement> teleport = new ArrayList<>();
 
 	protected Multimap<Tile, Integer> tileHighlights = ArrayListMultimap.create();
 
@@ -111,10 +123,21 @@ public class DetailedQuestStep extends QuestStep
 	@Setter
 	protected boolean hideMinimapLines;
 
+	public boolean hideRequirements;
+	public boolean considerBankForItemHighlight;
+	public int iconToUseForNeededItems = -1;
+
+
 	public DetailedQuestStep(QuestHelper questHelper, String text, Requirement... requirements)
 	{
 		super(questHelper, text);
 		this.requirements.addAll(Arrays.asList(requirements));
+	}
+
+	public DetailedQuestStep(QuestHelper questHelper, String text, List<Requirement> requirements)
+	{
+		super(questHelper, text);
+		this.requirements.addAll(requirements);
 	}
 
 	public DetailedQuestStep(QuestHelper questHelper, WorldPoint worldPoint, String text, Requirement... requirements)
@@ -124,21 +147,36 @@ public class DetailedQuestStep extends QuestStep
 		this.requirements.addAll(Arrays.asList(requirements));
 	}
 
+	public DetailedQuestStep(QuestHelper questHelper, WorldPoint worldPoint, String text, List<Requirement> requirements, List<Requirement> recommended)
+	{
+		super(questHelper, text);
+		this.worldPoint = worldPoint;
+		if (requirements != null)
+		{
+			this.requirements.addAll(requirements);
+		}
+		if (recommended != null)
+		{
+			this.recommended.addAll(recommended);
+		}
+	}
+
+	public DetailedQuestStep(QuestHelper questHelper, String text, List<Requirement> requirements, List<Requirement> recommended)
+	{
+		this(questHelper, null, text, requirements, recommended);
+	}
+
 	@Override
 	public void startUp()
 	{
 		super.startUp();
-		if (worldMapPoint != null)
-		{
-			mapPoint = new QuestHelperWorldMapPoint(worldMapPoint, getQuestImage());
-			worldMapPointManager.add(mapPoint);
-		}
-		else if (worldPoint != null)
+		if (worldPoint != null)
 		{
 			mapPoint = new QuestHelperWorldMapPoint(worldPoint, getQuestImage());
 			worldMapPointManager.add(mapPoint);
 		}
 		addItemTiles(requirements);
+		addItemTiles(recommended);
 		started = true;
 	}
 
@@ -170,10 +208,26 @@ public class DetailedQuestStep extends QuestStep
 		requirements.clear();
 	}
 
-	public void setRequirements(List<Requirement> newRequirements)
+	public void setRequirements(List<? extends Requirement> newRequirements)
 	{
 		requirements.clear();
 		requirements.addAll(newRequirements);
+	}
+
+	public void addRecommended(Requirement newRecommended)
+	{
+		recommended.add(newRecommended);
+	}
+
+	public void setRecommended(List<Requirement> newRecommended)
+	{
+		recommended.clear();
+		recommended.addAll(newRecommended);
+	}
+
+	public void addTeleport(Requirement newTeleport)
+	{
+		teleport.add(newTeleport);
 	}
 
 	@Subscribe
@@ -188,7 +242,7 @@ public class DetailedQuestStep extends QuestStep
 	public void setWorldPoint(WorldPoint worldPoint)
 	{
 		this.worldPoint = worldPoint;
-		if (worldMapPoint == null && started)
+		if (started)
 		{
 			if (mapPoint != null)
 			{
@@ -229,7 +283,7 @@ public class DetailedQuestStep extends QuestStep
 			for (QuestTile location : markedTiles)
 			{
 				BufferedImage combatIcon = spriteManager.getSprite(location.getIconID(), 0);
-				LocalPoint localPoint = QuestPerspective.getInstanceLocalPoint(client, location.getWorldPoint());
+				LocalPoint localPoint = QuestPerspective.getInstanceLocalPointFromReal(client, location.getWorldPoint());
 				if (localPoint != null)
 				{
 					OverlayUtil.renderTileOverlay(client, graphics, localPoint, combatIcon, questHelper.getConfig().targetOverlayColor());
@@ -238,6 +292,16 @@ public class DetailedQuestStep extends QuestStep
 		}
 
 		tileHighlights.keySet().forEach(tile -> checkAllTilesForHighlighting(tile, tileHighlights.get(tile), graphics));
+		renderTileIcon(graphics);
+	}
+
+	protected void renderTileIcon(Graphics2D graphics)
+	{
+		LocalPoint lp = QuestPerspective.getInstanceLocalPointFromReal(client, worldPoint);
+		if (lp != null && icon != null && iconItemID != -1)
+		{
+			OverlayUtil.renderTileOverlay(client, graphics, lp, icon, questHelper.getConfig().targetOverlayColor());
+		}
 	}
 
 	@Subscribe
@@ -293,7 +357,7 @@ public class DetailedQuestStep extends QuestStep
 				return;
 			}
 
-			LocalPoint lp = QuestPerspective.getInstanceLocalPoint(client, worldPoint);
+			LocalPoint lp = QuestPerspective.getInstanceLocalPointFromReal(client, worldPoint);
 			if (lp == null)
 			{
 				return;
@@ -342,8 +406,21 @@ public class DetailedQuestStep extends QuestStep
 	@Override
 	public void makeWidgetOverlayHint(Graphics2D graphics, QuestHelperPlugin plugin)
 	{
+		if (hideRequirements)
+		{
+			return;
+		}
+
 		renderInventory(graphics);
-		if (!hideMinimapLines)
+		for (WidgetHighlights widgetHighlights : widgetsToHighlight)
+		{
+			widgetHighlights.highlightChoices(graphics, client, plugin);
+		}
+	}
+
+	public void makeDirectionOverlayHint(Graphics2D graphics, QuestHelperPlugin plugin)
+	{
+		if (!hideMinimapLines && plugin.getConfig().showWorldLines())
 		{
 			WorldLines.createMinimapLines(graphics, client, linePoints, getQuestHelper().getConfig().targetOverlayColor());
 		}
@@ -368,7 +445,7 @@ public class DetailedQuestStep extends QuestStep
 
 			WorldPoint point = mapPoint.getWorldPoint();
 
-			if (currentRender < MAX_RENDER_SIZE / 2)
+			if (currentRender < MAX_RENDER_SIZE / 2 || !getQuestHelper().getConfig().haveMinimapArrowFlash())
 			{
 				renderMinimapArrow(graphics);
 			}
@@ -403,39 +480,78 @@ public class DetailedQuestStep extends QuestStep
 		}
 	}
 
-	@Override
-	public void makeOverlayHint(PanelComponent panelComponent, QuestHelperPlugin plugin, List<String> additionalText, Requirement... additionalRequirements)
+	@Subscribe
+	public void onWorldMapAreaChanged(WorldMapAreaChanged worldMapAreaChanged)
 	{
-		super.makeOverlayHint(panelComponent, plugin, additionalText);
+		if (mapPoint != null)
+		{
+			mapPoint.onWorldMapAreaChanged(worldMapAreaChanged);
+		}
+	}
 
-		if (inCutscene)
+	@Override
+	public void makeOverlayHint(PanelComponent panelComponent, QuestHelperPlugin plugin, @NonNull List<String> additionalText, @NonNull List<Requirement> additionalRequirements)
+	{
+		super.makeOverlayHint(panelComponent, plugin, additionalText, new ArrayList<>());
+
+		if (inCutscene || hideRequirements)
 		{
 			return;
 		}
 
-		if (!requirements.isEmpty() || (additionalRequirements != null && additionalRequirements.length > 0))
-		{
-			panelComponent.getChildren().add(LineComponent.builder().left("Requirements:").build());
-		}
-		Stream<Requirement> stream = requirements.stream();
-		if (additionalRequirements != null && additionalRequirements.length > 0)
-		{
-			stream = Stream.concat(stream, Stream.of(additionalRequirements));
-		}
-		stream
+		processRequirements(Stream.concat(requirements.stream(), additionalRequirements.stream()), panelComponent, "Requirements:");
+		processRequirements(recommended.stream(), panelComponent, "Recommended:");
+		processRequirements(teleport.stream(), panelComponent, "Teleports:");
+	}
+
+	private void processRequirements(Stream<Requirement> requirementsStream, PanelComponent panelComponent, String title)
+	{
+		PanelComponent tmpComponent = new PanelComponent();
+
+		requirementsStream
 			.distinct()
+			.filter(Objects::nonNull)
 			.map(req -> req.getDisplayTextWithChecks(client, questHelper.getConfig()))
 			.flatMap(Collection::stream)
-			.forEach(line -> panelComponent.getChildren().add(line));
+			.forEach(line -> tmpComponent.getChildren().add(line));
 
+		if (tmpComponent.getChildren().size() > 0)
+		{
+			panelComponent.getChildren().add(LineComponent.builder().left(title).build());
+			panelComponent.getChildren().addAll(tmpComponent.getChildren());
+		}
+	}
+
+	protected Widget getInventoryWidget()
+	{
+		return client.getWidget(ComponentID.INVENTORY_CONTAINER);
 	}
 
 	private void renderInventory(Graphics2D graphics)
 	{
-		Widget inventoryWidget = client.getWidget(WidgetInfo.INVENTORY);
+		Widget inventoryWidget = getInventoryWidget();
 		if (inventoryWidget == null || inventoryWidget.isHidden())
 		{
 			return;
+		}
+
+		Color baseColor = questHelper.getConfig().targetOverlayColor();
+
+		WorldPoint playerLocation = client.getLocalPlayer().getWorldLocation();
+		WorldPoint goalWp = QuestPerspective.getInstanceWorldPointFromReal(client, worldPoint);
+		if (goalWp == null || playerLocation.distanceTo(goalWp) > 100)
+		{
+			for (Requirement requirement : teleport)
+			{
+				for (Widget item : inventoryWidget.getDynamicChildren())
+				{
+					if (requirement instanceof ItemRequirement && ((ItemRequirement) requirement).getAllIds().contains(item.getItemId()))
+					{
+						highlightInventoryItem(item, baseColor, graphics);
+					}
+					// TODO: If teleport, highlight teleport in spellbook
+				}
+			}
 		}
 
 		if (requirements.isEmpty())
@@ -454,14 +570,34 @@ public class DetailedQuestStep extends QuestStep
 			{
 				if (isValidRequirementForRenderInInventory(requirement, item))
 				{
-					Rectangle slotBounds = item.getBounds();
-					int red = getQuestHelper().getConfig().targetOverlayColor().getRed();
-					int green = getQuestHelper().getConfig().targetOverlayColor().getGreen();
-					int blue = getQuestHelper().getConfig().targetOverlayColor().getBlue();
-					graphics.setColor(new Color(red, green, blue, 65));
-					graphics.fill(slotBounds);
+					highlightInventoryItem(item, baseColor, graphics);
 				}
 			}
+		}
+	}
+
+	private void highlightInventoryItem(Widget item, Color color, Graphics2D graphics)
+	{
+		Rectangle slotBounds = item.getBounds();
+		switch (questHelper.getConfig().highlightStyleInventoryItems())
+		{
+			case SQUARE:
+				graphics.setColor(ColorUtil.colorWithAlpha(color, 65));
+				graphics.fill(slotBounds);
+				graphics.setColor(color);
+				graphics.draw(slotBounds);
+				break;
+			case OUTLINE:
+				BufferedImage outlined = itemManager.getItemOutline(item.getItemId(), 1, color);
+				graphics.drawImage(outlined, (int) slotBounds.getX(), (int) slotBounds.getY(), null);
+				break;
+			case FILLED_OUTLINE:
+				BufferedImage outline = itemManager.getItemOutline(item.getItemId(), 1, color);
+				graphics.drawImage(outline, (int) slotBounds.getX(), (int) slotBounds.getY(), null);
+				Image image = ImageUtil.fillImage(itemManager.getImage(item.getItemId(), 1, false), ColorUtil.colorWithAlpha(color, 65));
+				graphics.drawImage(image, (int) slotBounds.getX(), (int) slotBounds.getY(), null);
+				break;
+			default:
 		}
 	}
 
@@ -513,7 +649,7 @@ public class DetailedQuestStep extends QuestStep
 		}
 		Tile[][] squareOfTiles = client.getScene().getTiles()[client.getPlane()];
 
-		// Reduce the two dimensional array into a single list for processing.
+		// Reduce the two-dimensional array into a single list for processing.
 		List<Tile> tiles = Stream.of(squareOfTiles)
 			.flatMap(Arrays::stream)
 			.filter(Objects::nonNull)
@@ -606,14 +742,48 @@ public class DetailedQuestStep extends QuestStep
 				return;
 			}
 
+			Color highlightColor = questHelper.getConfig().targetOverlayColor();
+
 			for (Requirement requirement : requirements)
 			{
 				if (isReqValidForHighlighting(requirement, ids))
 				{
-					OverlayUtil.renderPolygon(graphics, poly, questHelper.getConfig().targetOverlayColor());
+					if (iconToUseForNeededItems != -1)
+					{
+						BufferedImage icon = spriteManager.getSprite(iconToUseForNeededItems, 0);
+						LocalPoint localPoint = QuestPerspective.getInstanceLocalPointFromReal(client, tile.getWorldLocation());
+						if (localPoint != null)
+						{
+							OverlayUtil.renderTileOverlay(client, graphics, localPoint, icon, questHelper.getConfig().targetOverlayColor());
+						}
+					}
+					else
+					{
+						highlightGroundItem(tile, highlightColor, graphics, poly);
+					}
 					return;
 				}
 			}
+		}
+	}
+
+	private void highlightGroundItem(Tile tile, Color color, Graphics2D graphics, Polygon poly)
+	{
+		switch (questHelper.getConfig().highlightStyleGroundItems())
+		{
+			case CLICK_BOX:
+				break;
+			case OUTLINE:
+				modelOutlineRenderer.drawOutline(
+					tile.getItemLayer(),
+					questHelper.getConfig().outlineThickness(),
+					color,
+					questHelper.getConfig().outlineFeathering());
+				break;
+			case TILE:
+				OverlayUtil.renderPolygon(graphics, poly, color);
+				break;
+			default:
 		}
 	}
 
@@ -623,6 +793,8 @@ public class DetailedQuestStep extends QuestStep
 			&& requirementIsItem((ItemRequirement) requirement)
 			&& requirementContainsID((ItemRequirement) requirement, ids)
 			&& ((ItemRequirement) requirement).shouldRenderItemHighlights(client)
-			&& !requirement.check(client);
+			&& ((!considerBankForItemHighlight && !requirement.check(client)) ||
+			(considerBankForItemHighlight &&
+				!((ItemRequirement) requirement).check(client, false, questBank.getBankItems())));
 	}
 }

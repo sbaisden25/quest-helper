@@ -27,13 +27,13 @@ package com.questhelper.steps;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Module;
+import com.questhelper.tools.VisibilityHelper;
 import static com.questhelper.overlays.QuestHelperOverlay.TITLED_CONTENT_COLOR;
 import com.questhelper.QuestHelperPlugin;
-import com.questhelper.QuestVarbits;
+import com.questhelper.questinfo.QuestVarbits;
 import com.questhelper.questhelpers.QuestHelper;
 import com.questhelper.questhelpers.QuestUtil;
 import com.questhelper.requirements.Requirement;
-import com.questhelper.requirements.util.InventorySlots;
 import com.questhelper.steps.choice.DialogChoiceChange;
 import com.questhelper.steps.choice.DialogChoiceStep;
 import com.questhelper.steps.choice.DialogChoiceSteps;
@@ -48,24 +48,25 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Pattern;
+
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.Setter;
+import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
-import net.runelite.api.Player;
 import net.runelite.api.SpriteID;
-import net.runelite.api.coords.WorldPoint;
-import net.runelite.api.events.GameTick;
+import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.VarbitChanged;
 import net.runelite.api.events.WidgetLoaded;
-import net.runelite.api.widgets.Widget;
-import net.runelite.api.widgets.WidgetID;
-import net.runelite.api.widgets.WidgetInfo;
+import net.runelite.api.widgets.InterfaceID;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.SpriteManager;
 import net.runelite.client.ui.overlay.components.LineComponent;
 import net.runelite.client.ui.overlay.components.PanelComponent;
+import net.runelite.client.ui.overlay.outline.ModelOutlineRenderer;
 
 public abstract class QuestStep implements Module
 {
@@ -79,7 +80,13 @@ public abstract class QuestStep implements Module
 	ItemManager itemManager;
 
 	@Inject
-	SpriteManager spriteManager;
+	protected SpriteManager spriteManager;
+
+	@Inject
+	protected ModelOutlineRenderer modelOutlineRenderer;
+
+	@Inject
+	VisibilityHelper visibilityHelper;
 
 	@Getter
 	protected List<String> text;
@@ -126,6 +133,9 @@ public abstract class QuestStep implements Module
 	protected WidgetChoiceSteps widgetChoices = new WidgetChoiceSteps();
 
 	@Getter
+	protected List<WidgetHighlights> widgetsToHighlight = new ArrayList<>();
+
+	@Getter
 	private final List<QuestStep> substeps = new ArrayList<>();
 
 	@Getter
@@ -134,6 +144,8 @@ public abstract class QuestStep implements Module
 	@Getter
 	@Setter
 	private boolean showInSidebar = true;
+
+	protected String lastDialogSeen = "";
 
 	public QuestStep(QuestHelper questHelper)
 	{
@@ -211,7 +223,7 @@ public abstract class QuestStep implements Module
 	@Subscribe
 	public void onWidgetLoaded(WidgetLoaded event)
 	{
-		if (event.getGroupId() == WidgetID.DIALOG_OPTION_GROUP_ID) // 219
+		if (event.getGroupId() == InterfaceID.DIALOG_OPTION)
 		{
 			clientThread.invokeLater(this::highlightChoice);
 		}
@@ -247,7 +259,7 @@ public abstract class QuestStep implements Module
 
 	public void highlightChoice()
 	{
-		choices.checkChoices(client);
+		choices.checkChoices(client, lastDialogSeen);
 	}
 
 	public void setText(String text)
@@ -270,6 +282,11 @@ public abstract class QuestStep implements Module
 		choices.addChoice(new DialogChoiceStep(questHelper.getConfig(), choice));
 	}
 
+	public void addDialogStep(Pattern pattern)
+	{
+		choices.addChoice(new DialogChoiceStep(questHelper.getConfig(), pattern));
+	}
+
 	public void resetDialogSteps()
 	{
 		choices.resetChoices();
@@ -290,12 +307,24 @@ public abstract class QuestStep implements Module
 		choices.addChoice(new DialogChoiceStep(questHelper.getConfig(), id, choice));
 	}
 
+	public void addDialogStep(int id, Pattern pattern)
+	{
+		choices.addChoice(new DialogChoiceStep(questHelper.getConfig(), id, pattern));
+	}
+
 	public void addDialogSteps(String... newChoices)
 	{
 		for (String choice : newChoices)
 		{
 			choices.addChoice(new DialogChoiceStep(questHelper.getConfig(), choice));
 		}
+	}
+
+	public void addDialogConsideringLastLineCondition(String dialogString, String choiceValue)
+	{
+		DialogChoiceStep choice = new DialogChoiceStep(questHelper.getConfig(), dialogString);
+		choice.setExpectedPreviousLine(choiceValue);
+		choices.addChoice(choice);
 	}
 
 	public void addDialogChange(String choice, String newText)
@@ -326,25 +355,45 @@ public abstract class QuestStep implements Module
 		widgetChoices.addChoice(new WidgetTextChange(questHelper.getConfig(), choice, groupID, childID, newText));
 	}
 
-	public void makeOverlayHint(PanelComponent panelComponent, QuestHelperPlugin plugin, Requirement... additionalRequirements)
+	@Subscribe
+	public void onChatMessage(ChatMessage chatMessage)
 	{
-		makeOverlayHint(panelComponent, plugin, null, additionalRequirements);
+		if (chatMessage.getType() == ChatMessageType.DIALOG)
+		{
+			lastDialogSeen = chatMessage.getMessage();
+		}
 	}
 
-	public void makeOverlayHint(PanelComponent panelComponent, QuestHelperPlugin plugin, List<String> additionalText, Requirement... additionalRequirements)
+	public void clearWidgetHighlights() {
+		widgetsToHighlight.clear();
+	}
+
+	public void addWidgetHighlight(int groupID, int childID)
+	{
+		widgetsToHighlight.add(new WidgetHighlights(groupID, childID));
+	}
+
+	public void addWidgetHighlight(int groupID, int childID, int childChildID)
+	{
+		widgetsToHighlight.add(new WidgetHighlights(groupID, childID, childChildID));
+	}
+
+	public void addWidgetHighlightWithItemIdRequirement(int groupID, int childID, int itemID, boolean checkChildren)
+	{
+		widgetsToHighlight.add(new WidgetHighlights(groupID, childID, itemID, checkChildren));
+	}
+
+	public void makeOverlayHint(PanelComponent panelComponent, QuestHelperPlugin plugin, @NonNull List<String> additionalText, @NonNull List<Requirement> additionalRequirements)
 	{
 		addTitleToPanel(panelComponent);
 
-		if (additionalText != null)
-		{
-			additionalText.stream()
-				.filter(s -> !s.isEmpty())
-				.forEach(line -> addTextToPanel(panelComponent, line));
+		additionalText.stream()
+			.filter(s -> !s.isEmpty())
+			.forEach(line -> addTextToPanel(panelComponent, line));
 
-			if (text != null && (text.size() > 0 && !text.get(0).isEmpty()))
-			{
-				addTextToPanel(panelComponent, "");
-			}
+		if (text != null && (text.size() > 0 && !text.get(0).isEmpty()))
+		{
+			addTextToPanel(panelComponent, "");
 		}
 
 		if (!overlayText.isEmpty())
@@ -394,6 +443,10 @@ public abstract class QuestStep implements Module
 	}
 
 	public void makeWidgetOverlayHint(Graphics2D graphics, QuestHelperPlugin plugin)
+	{
+	}
+
+	public void makeDirectionOverlayHint(Graphics2D graphics, QuestHelperPlugin plugin)
 	{
 	}
 

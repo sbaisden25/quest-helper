@@ -25,6 +25,7 @@
  */
 package com.questhelper.overlays;
 
+import com.questhelper.QuestHelperConfig;
 import com.questhelper.QuestHelperPlugin;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
@@ -51,7 +52,11 @@ public class QuestHelperWorldOverlay extends Overlay
 	@Override
 	public Dimension render(Graphics2D graphics)
 	{
-		if (!plugin.getConfig().showSymbolOverlay())
+		boolean noOverlaysDrawn = !plugin.getConfig().showSymbolOverlay()
+			&& plugin.getConfig().highlightStyleGroundItems() == QuestHelperConfig.GroundItemHighlightStyle.NONE
+			&& plugin.getConfig().highlightStyleNpcs() == QuestHelperConfig.NpcHighlightStyle.NONE
+			&& plugin.getConfig().highlightStyleObjects() == QuestHelperConfig.ObjectHighlightStyle.NONE;
+		if (noOverlaysDrawn)
 		{
 			return null;
 		}
@@ -60,8 +65,13 @@ public class QuestHelperWorldOverlay extends Overlay
 
 		if (quest != null && quest.getCurrentStep() != null)
 		{
+			quest.makeWorldOverlayHint(graphics, plugin);
 			quest.getCurrentStep().makeWorldOverlayHint(graphics, plugin);
 		}
+
+		plugin.backgroundHelpers.forEach((name, questHelper) -> questHelper.getCurrentStep().makeWorldOverlayHint(graphics, plugin));
+
+		plugin.getRuneliteObjectManager().makeWorldOverlayHint(graphics);
 
 		return null;
 	}

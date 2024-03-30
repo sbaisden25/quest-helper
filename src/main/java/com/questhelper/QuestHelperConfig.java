@@ -25,8 +25,10 @@
 package com.questhelper;
 
 import com.questhelper.panel.questorders.QuestOrders;
-import com.questhelper.questhelpers.Quest;
+import com.questhelper.questhelpers.QuestDetails;
 import com.questhelper.questhelpers.QuestHelper;
+import com.questhelper.requirements.player.SkillRequirement;
+import com.questhelper.requirements.quest.QuestRequirement;
 import java.awt.Color;
 import java.util.Arrays;
 import java.util.Collection;
@@ -35,45 +37,61 @@ import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import lombok.Getter;
+import net.runelite.api.Skill;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.ConfigSection;
+import net.runelite.client.config.Range;
 import net.runelite.client.util.Text;
 
 @ConfigGroup("questhelper")
 public interface QuestHelperConfig extends Config
 {
+	String QUEST_HELPER_GROUP = "questhelper";
+	String QUEST_BACKGROUND_GROUP = "questhelpervars";
+
 	enum QuestOrdering implements Comparator<QuestHelper>
 	{
-		/** Sort quests in alphabetical order */
+		/**
+		 * Sort quests in alphabetical order
+		 */
 		A_TO_Z(QuestOrders.sortAToZ(), QuestFilter.QUEST, QuestFilter.MINIQUEST, QuestFilter.ACHIEVEMENT_DIARY,
-			QuestFilter.SKILL, QuestFilter.GENERIC_HELPER),
-		/** Sort quests in reverse alphabetical order */
+			QuestFilter.SKILL_HELPER, QuestFilter.GENERIC_HELPER, QuestFilter.PLAYER_MADE_QUESTS),
+		/**
+		 * Sort quests in reverse alphabetical order
+		 */
 		Z_TO_A(QuestOrders.sortZToA(), QuestFilter.QUEST, QuestFilter.MINIQUEST, QuestFilter.ACHIEVEMENT_DIARY,
-			QuestFilter.SKILL, QuestFilter.GENERIC_HELPER),
-		/** Sort quests according to the Optimal Quest Guide (https://oldschool.runescape.wiki/w/Optimal_quest_guide) */
+			QuestFilter.SKILL_HELPER, QuestFilter.GENERIC_HELPER, QuestFilter.PLAYER_MADE_QUESTS),
+		/**
+		 * Sort quests according to the Optimal Quest Guide (https://oldschool.runescape.wiki/w/Optimal_quest_guide)
+		 */
 		OPTIMAL(QuestOrders.sortOptimalOrder(), QuestFilter.OPTIMAL, QuestFilter.GENERIC_HELPER),
-		/** Sort quests according to the Optimal Quest Guide (Ironman version) (https://oldschool.runescape.wiki/w/Optimal_quest_guide/Ironman) */
+		/**
+		 * Sort quests according to the Optimal Quest Guide (Ironman version) (https://oldschool.runescape.wiki/w/Optimal_quest_guide/Ironman)
+		 */
 		OPTIMAL_IRONMAN(QuestOrders.sortOptimalIronmanOrder(), QuestFilter.OPTIMAL, QuestFilter.GENERIC_HELPER),
-		/** Sort quest by their release date (https://oldschool.runescape.wiki/w/Quests/Release_dates) */
+		/**
+		 * Sort quest by their release date (https://oldschool.runescape.wiki/w/Quests/Release_dates)
+		 */
 		RELEASE_DATE(QuestOrders.sortByRelease(), QuestFilter.QUEST, QuestFilter.MINIQUEST),
 
 		QUEST_POINTS_ASC(QuestOrders.sortByQuestPointRewardAscending(), QuestFilter.QUEST),
-		QUEST_POINTS_DESC(QuestOrders.sortByQuestPointRewardDescending(), QuestFilter.QUEST)
-		;
+		QUEST_POINTS_DESC(QuestOrders.sortByQuestPointRewardDescending(), QuestFilter.QUEST);
 
 		private final Comparator<QuestHelper> comparator;
 		@Getter
 		private final QuestFilter[] sections;
 
-		QuestOrdering(Comparator<QuestHelper> comparator, QuestFilter... sections) {
+		QuestOrdering(Comparator<QuestHelper> comparator, QuestFilter... sections)
+		{
 			this.comparator = comparator;
 			this.sections = sections;
 
 		}
 
-		public List<QuestHelper> sort(Collection<QuestHelper> list) {
+		public List<QuestHelper> sort(Collection<QuestHelper> list)
+		{
 			return list.stream().sorted(this).collect(Collectors.toList());
 		}
 
@@ -84,7 +102,8 @@ public interface QuestHelperConfig extends Config
 		}
 	}
 
-	enum QuestFilter implements Predicate<QuestHelper> {
+	enum QuestFilter implements Predicate<QuestHelper>
+	{
 		/**
 		 * Show all quests
 		 */
@@ -97,69 +116,89 @@ public interface QuestHelperConfig extends Config
 		 * Show all except generic helpers
 		 */
 		OPTIMAL("Optimal ordering",
-				q -> q.getQuest().getQuestType() == Quest.Type.P2P ||
-						q.getQuest().getQuestType() == Quest.Type.F2P ||
-						q.getQuest().getQuestType() == Quest.Type.MINIQUEST ||
-						q.getQuest().getQuestType() == Quest.Type.ACHIEVEMENT_DIARY,
-				false),
+			q -> q.getQuest().getQuestType() == QuestDetails.Type.P2P ||
+				q.getQuest().getQuestType() == QuestDetails.Type.F2P ||
+				q.getQuest().getQuestType() == QuestDetails.Type.MINIQUEST ||
+				q.getQuest().getQuestType() == QuestDetails.Type.ACHIEVEMENT_DIARY,
+			false),
 		/**
 		 * Show all free-to-play quests
 		 */
-		FREE_TO_PLAY(Quest.Type.F2P),
+		FREE_TO_PLAY(QuestDetails.Type.F2P),
 		/**
 		 * Show all members' quests
 		 */
-		MEMBERS(Quest.Type.P2P),
+		MEMBERS(QuestDetails.Type.P2P),
 		/**
 		 * Show all quests
 		 */
-		QUEST("Quests", q -> q.getQuest().getQuestType() == Quest.Type.P2P ||
-				q.getQuest().getQuestType() == Quest.Type.F2P),
+		QUEST("Quests", q -> q.getQuest().getQuestType() == QuestDetails.Type.P2P ||
+			q.getQuest().getQuestType() == QuestDetails.Type.F2P),
 		/**
 		 * Show all miniquests (all miniquests are members' only)
 		 */
-		MINIQUEST("Miniquests", Quest.Type.MINIQUEST),
+		MINIQUEST("Miniquests", QuestDetails.Type.MINIQUEST),
 		/**
 		 * Show all achievement diaries
 		 */
-		ACHIEVEMENT_DIARY("Achievement diaries", Quest.Type.ACHIEVEMENT_DIARY),
+		ACHIEVEMENT_DIARY("Achievement diaries", QuestDetails.Type.ACHIEVEMENT_DIARY),
 		/**
 		 * Show all generic helpers
 		 */
-		GENERIC_HELPER("Generic helpers", Quest.Type.GENERIC),
-		SKILL("Skill helpers", Quest.Type.SKILL);
+		GENERIC_HELPER("Generic helpers", QuestDetails.Type.GENERIC),
+		/**
+		 * Show all skills
+		 */
+		SKILL_HELPER("Skill helpers", q -> q.getQuest().getQuestType() == QuestDetails.Type.SKILL_P2P ||
+			q.getQuest().getQuestType() == QuestDetails.Type.SKILL_F2P),
+		/**
+		 * Show all free-to-play skills
+		 */
+		SKILL_FREE_TO_PLAY(QuestDetails.Type.SKILL_F2P),
+		/**
+		 * Show all members' skills
+		 */
+		SKILL_MEMBERS(QuestDetails.Type.SKILL_P2P),
+
+		PLAYER_MADE_QUESTS("Player-made quests", q -> q.getQuest().getQuestType() == QuestDetails.Type.PLAYER_QUEST);
+
 
 		private final Predicate<QuestHelper> predicate;
 
 		@Getter
 		private final String displayName;
 
-		protected final boolean shouldDisplay;
+		private final boolean shouldDisplay;
 
-		QuestFilter(Predicate<QuestHelper> predicate) {
+		QuestFilter(Predicate<QuestHelper> predicate)
+		{
 			this.predicate = predicate;
 			this.displayName = Text.titleCase(this);
 			this.shouldDisplay = true;
 		}
 
-		QuestFilter(String displayName, Predicate<QuestHelper> predicate) {
+		QuestFilter(String displayName, Predicate<QuestHelper> predicate)
+		{
 			this.predicate = predicate;
 			this.displayName = displayName;
 			this.shouldDisplay = true;
 		}
 
-		QuestFilter(String displayName, Predicate<QuestHelper> predicate, boolean shouldDisplay) {
+		QuestFilter(String displayName, Predicate<QuestHelper> predicate, boolean shouldDisplay)
+		{
 			this.predicate = predicate;
 			this.displayName = displayName;
 			this.shouldDisplay = shouldDisplay;
 		}
 
 		@Override
-		public boolean test(QuestHelper quest) {
+		public boolean test(QuestHelper quest)
+		{
 			return predicate.test(quest);
 		}
 
-		public List<QuestHelper> test(Collection<QuestHelper> helpers) {
+		public List<QuestHelper> test(Collection<QuestHelper> helpers)
+		{
 
 			return helpers.stream().filter(this).collect(Collectors.toList());
 		}
@@ -168,6 +207,37 @@ public interface QuestHelperConfig extends Config
 		{
 			return Arrays.stream(QuestFilter.values()).filter((questFilter -> questFilter.shouldDisplay)).toArray(QuestFilter[]::new);
 		}
+	}
+
+	enum NpcHighlightStyle
+	{
+		NONE,
+		OUTLINE,
+		CONVEX_HULL,
+		TILE
+	}
+
+	enum ObjectHighlightStyle
+	{
+		NONE,
+		CLICK_BOX,
+		OUTLINE,
+	}
+
+	enum GroundItemHighlightStyle
+	{
+		NONE,
+		CLICK_BOX,
+		OUTLINE,
+		TILE
+	}
+
+	enum InventoryItemHighlightStyle
+	{
+		NONE,
+		SQUARE,
+		OUTLINE,
+		FILLED_OUTLINE
 	}
 
 	@ConfigItem(
@@ -200,8 +270,111 @@ public interface QuestHelperConfig extends Config
 		return true;
 	}
 
+	@ConfigItem(
+		keyName = "stewBoostsPanel",
+		name = "Use Spicy stew for boosts",
+		description = "Raises the boost maximum boost for certain skills to 5"
+	)
+	default boolean stewBoosts()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "showFan",
+		name = "Fan appears on quest completion",
+		description = "Have someone appear to celebrate whenever you complete a quest"
+	)
+	default boolean showFan()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "showRuneliteObjects",
+		name = "Show player-made quest rewards",
+		description = "Choose whether changes from player-made quests are displayed"
+	)
+	default boolean showRuneliteObjects()
+	{
+		return true;
+	}
+
+	@ConfigSection(
+		position = 0,
+		name = "Item highlighting",
+		description = "Determines what items to highlight in the background"
+	)
+	String itemSection = "itemSection";
+
+	@ConfigItem(
+		position = 0,
+		keyName = "highlightItemsBackground",
+		name = "Always highlight needed items",
+		description = "Highlight items you need for marked content type at all times",
+		section = itemSection
+	)
+	default boolean highlightItemsBackground()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		position = 1,
+		keyName = "highlightNeededQuestItems",
+		name = "Highlight active quest items",
+		description = "Highlight all the active quest's items you're missing on the floor",
+		section = itemSection
+	)
+	default boolean highlightNeededQuestItems()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+		position = 2,
+		keyName = "highlightNeededMiniquestItems",
+		name = "Highlight miniquest items",
+		description = "Highlight all miniquest items you're missing on the floor",
+		section = itemSection
+	)
+	default boolean highlightNeededMiniquestItems()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+		position = 3,
+		keyName = "highlightNeededAchievementDiaryItems",
+		name = "Highlight achievement diary items",
+		description = "Highlight all achievement diary items you're missing on the floor",
+		section = itemSection
+	)
+	default boolean highlightNeededAchievementDiaryItems()
+	{
+		return true;
+	}
+
 	@ConfigSection(
 		position = 1,
+		name = "Sidebar details",
+		description = "Determines sidebar rendering"
+	)
+	String sidebarDetailsSection = "sidebarDetailsSection";
+
+	@ConfigItem(
+		keyName = "showFullRequirements",
+		name = "Show full quest requirements",
+		description = "Show all quest requirements, including requirements for sub-quests",
+		section = sidebarDetailsSection
+	)
+	default boolean showFullRequirements()
+	{
+		return false;
+	}
+
+	@ConfigSection(
+		position = 2,
 		name = "Quest Hints",
 		description = "Determines what hints should be shown"
 	)
@@ -221,12 +394,86 @@ public interface QuestHelperConfig extends Config
 	@ConfigItem(
 		keyName = "showSymbolOverlay",
 		name = "Display icons on NPCs and objects",
-		description = "Choose whether NPCs should icons marking them as the current target or not",
+		description = "Choose whether NPCs should have icons marking them as the current target or not",
 		section = hintsSection
 	)
 	default boolean showSymbolOverlay()
 	{
 		return true;
+	}
+
+	@ConfigItem(
+		keyName = "highlightStyleNpcs",
+		name = "Highlight style NPCs",
+		description = "Choose the highlight style of the target NPCs",
+		section = hintsSection
+	)
+	default NpcHighlightStyle highlightStyleNpcs()
+	{
+		return NpcHighlightStyle.OUTLINE;
+	}
+
+	@ConfigItem(
+		keyName = "highlightStyleObjects",
+		name = "Highlight style objects",
+		description = "Choose the highlight style of the target objects",
+		section = hintsSection
+	)
+	default ObjectHighlightStyle highlightStyleObjects()
+	{
+		return ObjectHighlightStyle.OUTLINE;
+	}
+
+	@ConfigItem(
+		keyName = "highlightStyleGroundItems",
+		name = "Highlight style ground items",
+		description = "Choose the highlight style of the target items",
+		section = hintsSection
+	)
+	default GroundItemHighlightStyle highlightStyleGroundItems()
+	{
+		return GroundItemHighlightStyle.OUTLINE;
+	}
+
+	@ConfigItem(
+		keyName = "highlightStyleInventoryItems",
+		name = "Highlight style inventory items",
+		description = "Choose the highlight style of the target inventory items",
+		section = hintsSection
+	)
+	default InventoryItemHighlightStyle highlightStyleInventoryItems()
+	{
+		return InventoryItemHighlightStyle.FILLED_OUTLINE;
+	}
+
+	@Range(
+		min = 0,
+		max = 50
+	)
+	@ConfigItem(
+		keyName = "outlineThickness",
+		name = "Outline thickness",
+		description = "Choose the thickness of target model outlines",
+		section = hintsSection
+	)
+	default int outlineThickness()
+	{
+		return 4;
+	}
+
+	@Range(
+		min = 0,
+		max = 4
+	)
+	@ConfigItem(
+		keyName = "outlineFeathering",
+		name = "Outline feathering",
+		description = "Choose how the model outline is faded out",
+		section = hintsSection
+	)
+	default int outlineFeathering()
+	{
+		return 4;
 	}
 
 	@ConfigItem(
@@ -236,6 +483,17 @@ public interface QuestHelperConfig extends Config
 		section = hintsSection
 	)
 	default boolean showMiniMapArrow()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+		keyName = "haveMinimapArrowFlash",
+		name = "Have the minimap arrow flash",
+		description = "Choose whether the minimap direction arrow flashes",
+		section = hintsSection
+	)
+	default boolean haveMinimapArrowFlash()
 	{
 		return true;
 	}
@@ -261,9 +519,17 @@ public interface QuestHelperConfig extends Config
 	{
 		return true;
 	}
-	
+
+	@ConfigItem(
+		keyName = "solvePuzzles",
+		name = "Show Puzzle Solutions",
+		description = "Shows the solutions to quest puzzles",
+		section = hintsSection
+	)
+	default boolean solvePuzzles() { return true; }
+
 	@ConfigSection(
-		position = 1,
+		position = 3,
 		name = "Colours",
 		description = "What colour each option can be"
 	)
@@ -314,6 +580,17 @@ public interface QuestHelperConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "boostColour",
+		name = "Colour of boostable skill",
+		description = "Change the colour that will indicate a skill level check has passed",
+		section = colorSection
+	)
+	default Color boostColour()
+	{
+		return Color.ORANGE;
+	}
+
+	@ConfigItem(
 		keyName = "debugColor",
 		name = "Debug Colour",
 		description = "debug",
@@ -326,7 +603,7 @@ public interface QuestHelperConfig extends Config
 	}
 
 	@ConfigSection(
-		position = 2,
+		position = 4,
 		name = "Quest Filters",
 		description = "Determines which quests should be shown via the selected filter(s)"
 	)
@@ -363,9 +640,9 @@ public interface QuestHelperConfig extends Config
 		position = 2,
 		section = filterSection
 	)
-	default Quest.Difficulty difficulty()
+	default QuestDetails.Difficulty difficulty()
 	{
-		return Quest.Difficulty.ALL;
+		return QuestDetails.Difficulty.ALL;
 	}
 
 	@ConfigItem(

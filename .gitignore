@@ -7,3 +7,9 @@ build
 nbactions.xml
 nb-configuration.xml
 nbproject/
+.run/
+bin/main
+bin/test
+out
+.DS_Store
+*.iml

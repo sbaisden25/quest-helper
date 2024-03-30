@@ -97,7 +97,8 @@ public class ItemRequirements extends ItemRequirement
 	{
 		Predicate<ItemRequirement> predicate = r -> r.check(client, checkConsideringSlotRestrictions);
 		int successes = (int) itemRequirements.stream().filter(Objects::nonNull).filter(predicate).count();
-		return logicType.compare(successes, itemRequirements.size());
+		hadItemLastCheck = logicType.compare(successes, itemRequirements.size());
+		return hadItemLastCheck;
 	}
 
 	@Override
@@ -105,7 +106,8 @@ public class ItemRequirements extends ItemRequirement
 	{
 		Predicate<ItemRequirement> predicate = r -> r.check(client, checkConsideringSlotRestrictions, items);
 		int successes = (int) itemRequirements.stream().filter(Objects::nonNull).filter(predicate).count();
-		return logicType.compare(successes, itemRequirements.size());
+		hadItemLastCheck = logicType.compare(successes, itemRequirements.size());
+		return hadItemLastCheck;
 	}
 
 	@Override
@@ -119,7 +121,7 @@ public class ItemRequirements extends ItemRequirement
 										 List<Item> bankItems, QuestHelperConfig config)
 	{
 		Color color = config.failColour();
-		if (!this.isActualItem() && !(this.getItemRequirements() instanceof ArrayList))
+		if (!this.isActualItem() && this.getItemRequirements() == null)
 		{
 			color = Color.GRAY;
 		}
@@ -152,6 +154,7 @@ public class ItemRequirements extends ItemRequirement
 		newItem.setQuestBank(getQuestBank());
 		newItem.setTooltip(getTooltip());
 		newItem.logicType = logicType;
+		newItem.additionalOptions = additionalOptions;
 
 		return newItem;
 	}

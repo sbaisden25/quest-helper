@@ -25,12 +25,16 @@
  */
 package com.questhelper.steps;
 
+import com.questhelper.QuestHelperConfig;
 import com.questhelper.QuestHelperPlugin;
+import static com.questhelper.overlays.QuestHelperWorldOverlay.IMAGE_Z_OFFSET;
 import com.questhelper.questhelpers.QuestHelper;
 import com.questhelper.requirements.Requirement;
 import com.questhelper.steps.overlay.DirectionArrow;
 import com.questhelper.steps.tools.QuestPerspective;
+import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.Polygon;
 import java.awt.Rectangle;
 import java.awt.Shape;
 import java.awt.geom.Line2D;
@@ -38,11 +42,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Function;
 import javax.inject.Inject;
 import lombok.Setter;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.NPC;
+import net.runelite.api.Point;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.NpcChanged;
@@ -50,22 +56,28 @@ import net.runelite.api.events.NpcDespawned;
 import net.runelite.api.events.NpcSpawned;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.ui.overlay.OverlayUtil;
-import static com.questhelper.overlays.QuestHelperWorldOverlay.IMAGE_Z_OFFSET;
+import net.runelite.client.util.ColorUtil;
 
 public class NpcStep extends DetailedQuestStep
 {
 	@Inject
 	protected Client client;
 
-	private final int npcID;
-	private final ArrayList<Integer> alternateNpcIDs = new ArrayList<>();
-
-	private boolean allowMultipleHighlights;
-
-	private final ArrayList<NPC> npcs = new ArrayList<>();
+	protected final int npcID;
+	protected final List<Integer> alternateNpcIDs = new ArrayList<>();
 
 	@Setter
-	private int maxRoamRange = 48;
+	protected boolean allowMultipleHighlights;
+
+	protected final ArrayList<NPC> npcs = new ArrayList<>();
+
+	@Setter
+	protected int maxRoamRange = 48;
+
+	protected boolean mustBeFocused = false;
+
+	@Setter
+	protected String npcName;
 
 	public NpcStep(QuestHelper questHelper, int npcID, String text, Requirement... requirements)
 	{
@@ -73,10 +85,64 @@ public class NpcStep extends DetailedQuestStep
 		this.npcID = npcID;
 	}
 
+	public NpcStep(QuestHelper questHelper, int[] npcID, String text, Requirement... requirements)
+	{
+		super(questHelper, text, requirements);
+		this.npcID = npcID[0];
+		for (int i = 1; i < npcID.length; i++)
+		{
+			this.alternateNpcIDs.add(npcID[i]);
+		}
+	}
+
+	public NpcStep(QuestHelper questHelper, int[] npcID, WorldPoint worldPoint, String text, boolean allowMultipleHighlights, Requirement... requirements)
+	{
+		this(questHelper, npcID, worldPoint, text, requirements);
+		this.allowMultipleHighlights = allowMultipleHighlights;
+	}
+
 	public NpcStep(QuestHelper questHelper, int npcID, WorldPoint worldPoint, String text, Requirement... requirements)
 	{
 		super(questHelper, worldPoint, text, requirements);
 		this.npcID = npcID;
+	}
+
+	public NpcStep(QuestHelper questHelper, int npcID, String npcName, WorldPoint worldPoint, String text, Requirement... requirements)
+	{
+		super(questHelper, worldPoint, text, requirements);
+		this.npcID = npcID;
+		this.npcName = npcName;
+	}
+
+	public NpcStep(QuestHelper questHelper, int npcID, String npcName, WorldPoint worldPoint, String text, boolean allowMultipleHighlights, Requirement... requirements)
+	{
+		super(questHelper, worldPoint, text, requirements);
+		this.npcID = npcID;
+		this.npcName = npcName;
+		this.allowMultipleHighlights = allowMultipleHighlights;
+	}
+
+	public NpcStep(QuestHelper questHelper, int npcID, WorldPoint worldPoint, String text, List<Requirement> requirements, List<Requirement> optionalRequirements)
+	{
+		super(questHelper, worldPoint, text, requirements, optionalRequirements);
+		this.npcID = npcID;
+	}
+
+	public NpcStep(QuestHelper questHelper, int npcID, WorldPoint worldPoint, String text, boolean allowMultipleHighlights, List<Requirement> requirements, List<Requirement> optionalRequirements)
+	{
+		super(questHelper, worldPoint, text, requirements, optionalRequirements);
+		this.npcID = npcID;
+		this.allowMultipleHighlights = allowMultipleHighlights;
+	}
+
+	public NpcStep(QuestHelper questHelper, int[] npcID, WorldPoint worldPoint, String text, Requirement... requirements)
+	{
+		super(questHelper, worldPoint, text, requirements);
+		this.npcID = npcID[0];
+		for (int i = 1; i < npcID.length; i++)
+		{
+			this.alternateNpcIDs.add(npcID[i]);
+		}
 	}
 
 	public NpcStep(QuestHelper questHelper, int npcID, WorldPoint worldPoint, String text, boolean allowMultipleHighlights, Requirement... requirements)
@@ -90,25 +156,42 @@ public class NpcStep extends DetailedQuestStep
 		this(questHelper, npcID, null, text, allowMultipleHighlights, requirements);
 	}
 
+	public NpcStep copy()
+	{
+		NpcStep newStep = new NpcStep(getQuestHelper(), npcID, worldPoint, null, requirements, recommended);
+		if (text != null)
+		{
+			newStep.setText(text);
+		}
+		newStep.allowMultipleHighlights = allowMultipleHighlights;
+		newStep.addAlternateNpcs(alternateNpcIDs);
+		if (mustBeFocused) {
+			newStep.setMustBeFocused(true);
+		}
+		newStep.setMaxRoamRange(maxRoamRange);
+
+		return newStep;
+	}
+
+	protected boolean npcPassesChecks(NPC npc)
+	{
+		if (npcName != null && (npc.getName() == null || !npc.getName().equals(npcName))) return false;
+		return npcID == npc.getId() || alternateNpcIDs.contains(npc.getId());
+	}
+
 	@Override
 	public void startUp()
 	{
 		super.startUp();
 
+		scanForNpcs();
+	}
+
+	public void scanForNpcs()
+	{
 		for (NPC npc : client.getNpcs())
 		{
-			if (npcID == npc.getId() || alternateNpcIDs.contains(npc.getId()))
-			{
-				WorldPoint npcPoint = WorldPoint.fromLocalInstance(client, npc.getLocalLocation());
-				if (this.npcs.size() == 0 && (worldPoint == null || npcPoint.distanceTo(worldPoint) < maxRoamRange))
-				{
-					this.npcs.add(npc);
-				}
-				else if (allowMultipleHighlights)
-				{
-					this.npcs.add(npc);
-				}
-			}
+			addNpcToListGivenMatchingID(npc, this::npcPassesChecks, npcs);
 		}
 	}
 
@@ -130,6 +213,12 @@ public class NpcStep extends DetailedQuestStep
 		return ids;
 	}
 
+	public void setMustBeFocused(boolean mustBeFocused)
+	{
+		this.mustBeFocused = mustBeFocused;
+		if (mustBeFocused) allowMultipleHighlights = true;
+	}
+
 	@Override
 	public void shutDown()
 	{
@@ -146,34 +235,43 @@ public class NpcStep extends DetailedQuestStep
 		{
 			npcs.clear();
 		}
+		else if (event.getGameState() == GameState.LOGGED_IN)
+		{
+			scanForNpcs();
+		}
 	}
 
 	@Subscribe
 	public void onNpcSpawned(NpcSpawned event)
 	{
-		if (event.getNpc().getId() == npcID || alternateNpcIDs.contains(event.getNpc().getId()))
+		addNpcToListGivenMatchingID(event.getNpc(), this::npcPassesChecks, npcs);
+	}
+
+	public void addNpcToListGivenMatchingID(NPC npc, Function<NPC, Boolean> condition, List<NPC> list)
+	{
+		if (condition.apply(npc))
 		{
-			WorldPoint npcPoint = WorldPoint.fromLocalInstance(client, event.getNpc().getLocalLocation());
+			WorldPoint npcPoint = WorldPoint.fromLocalInstance(client, npc.getLocalLocation());
 			if (npcs.size() == 0)
 			{
 				if (worldPoint == null)
 				{
-					npcs.add(event.getNpc());
+					list.add(npc);
 				}
 				else if (npcPoint.distanceTo(worldPoint) < maxRoamRange)
 				{
-					npcs.add(event.getNpc());
+					list.add(npc);
 				}
 			}
 			else if (allowMultipleHighlights)
 			{
 				if (worldPoint == null || npcPoint.distanceTo(worldPoint) < maxRoamRange)
 				{
-					npcs.add(event.getNpc());
+					list.add(npc);
 				}
 			}
 		}
-	}
+	};
 
 	@Subscribe
 	public void onNpcDespawned(NpcDespawned event)
@@ -187,7 +285,9 @@ public class NpcStep extends DetailedQuestStep
 		int newNpcId = npcChanged.getNpc().getId();
 		npcs.remove(npcChanged.getNpc());
 
-		if (allIds().contains(newNpcId) && npcChanged.getNpc().getComposition().isVisible())
+		// This used to contain isVisible check as well, but it doesn't seem to be accurate for a lot
+		// This MAY for some NPCs which have alternate version (The Kendal) require re-consideration
+		if (allIds().contains(newNpcId))
 		{
 			if (npcs.size() == 0 || allowMultipleHighlights)
 			{
@@ -205,17 +305,69 @@ public class NpcStep extends DetailedQuestStep
 
 		if (worldPoint != null)
 		{
-			Collection<WorldPoint> localWorldPoints = QuestPerspective.toLocalInstance(client, worldPoint);
+			Collection<WorldPoint> localWorldPoints = QuestPerspective.toLocalInstanceFromReal(client, worldPoint);
 			if (localWorldPoints.isEmpty())
 			{
 				return;
 			}
 		}
 
+		Color configColor = getQuestHelper().getConfig().targetOverlayColor();
+
 		for (NPC npc : npcs)
 		{
-			OverlayUtil.renderActorOverlayImage(graphics, npc, icon, questHelper.getConfig().targetOverlayColor(),
-				IMAGE_Z_OFFSET);
+			if (mustBeFocused && npc.getInteracting() != client.getLocalPlayer()) continue;
+			highlightNpc(npc, configColor, graphics);
+
+			if (questHelper.getConfig().showSymbolOverlay())
+			{
+				int zOffset = questHelper.getConfig().highlightStyleNpcs() == QuestHelperConfig.NpcHighlightStyle.TILE
+					? IMAGE_Z_OFFSET
+					: (npc.getLogicalHeight() / 2);
+
+				Point imageLocation = npc.getCanvasImageLocation(icon, zOffset);
+				if (imageLocation != null)
+				{
+					OverlayUtil.renderImageLocation(graphics, imageLocation, icon);
+				}
+			}
+		}
+	}
+
+	@Override
+	protected void renderTileIcon(Graphics2D graphics)
+	{
+	}
+
+	private void highlightNpc(NPC npc, Color color, Graphics2D graphics)
+	{
+		switch (questHelper.getConfig().highlightStyleNpcs())
+		{
+			case CONVEX_HULL:
+				OverlayUtil.renderHoverableArea(
+					graphics,
+					npc.getConvexHull(),
+					client.getMouseCanvasPosition(),
+					ColorUtil.colorWithAlpha(color, 20),
+					questHelper.getConfig().targetOverlayColor().darker(),
+					questHelper.getConfig().targetOverlayColor());
+				break;
+			case OUTLINE:
+				modelOutlineRenderer.drawOutline(
+					npc,
+					questHelper.getConfig().outlineThickness(),
+					color,
+					questHelper.getConfig().outlineFeathering()
+				);
+				break;
+			case TILE:
+				Polygon poly = npc.getCanvasTilePoly();
+				if (poly != null)
+				{
+					OverlayUtil.renderPolygon(graphics, poly, color);
+				}
+				break;
+			default:
 		}
 	}
 

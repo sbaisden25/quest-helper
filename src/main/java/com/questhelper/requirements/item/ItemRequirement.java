@@ -26,7 +26,9 @@
  */
 package com.questhelper.requirements.item;
 
-import com.questhelper.QuestBank;
+import com.questhelper.collections.ItemCollections;
+import com.questhelper.bank.QuestBank;
+import com.questhelper.collections.ItemWithCharge;
 import com.questhelper.QuestHelperConfig;
 import com.questhelper.requirements.AbstractRequirement;
 import com.questhelper.requirements.Requirement;
@@ -50,10 +52,12 @@ import net.runelite.client.ui.overlay.components.LineComponent;
 
 public class ItemRequirement extends AbstractRequirement
 {
+	@Setter
 	@Getter
-	private final int id;
+	private int id;
 
-	private final String name;
+	@Setter
+	private String name;
 
 	@Setter
 	@Getter
@@ -81,11 +85,30 @@ public class ItemRequirement extends AbstractRequirement
 
 	@Setter
 	@Getter
-	private Requirement conditionToHide;
+	protected Requirement conditionToHide;
 
 	@Getter
 	@Setter
 	private QuestBank questBank;
+
+	@Getter
+	protected boolean hadItemLastCheck;
+
+	@Getter
+	protected boolean isConsumedItem = true;
+
+	protected boolean shouldAggregate = true;
+
+	/**
+	 * Denotes whether the quantity-check should take into consideration item charges.
+	 * With this enabled, 1xRing of dueling(7) will count as 7 quantity.
+	 */
+	@Setter
+	@Getter
+	protected boolean isChargedItem = false;
+
+	@Setter
+	protected Requirement additionalOptions;
 
 	public ItemRequirement(String name, int id)
 	{
@@ -131,9 +154,36 @@ public class ItemRequirement extends AbstractRequirement
 		this.addAlternates(items.subList(1, items.size()));
 	}
 
+	public ItemRequirement(String name, ItemCollections itemCollection)
+	{
+		this(name, itemCollection.getItems().get(0), 1);
+		this.setUrlSuffix(itemCollection.getWikiTerm());
+		this.addAlternates(itemCollection.getItems().subList(1, itemCollection.getItems().size()));
+	}
+
+	public ItemRequirement(String name, ItemCollections itemCollection, int quantity)
+	{
+		this(name, itemCollection.getItems().get(0), quantity);
+		this.setUrlSuffix(itemCollection.getWikiTerm());
+		this.addAlternates(itemCollection.getItems().subList(1, itemCollection.getItems().size()));
+	}
+
+	public ItemRequirement(String name, ItemCollections itemCollection, int quantity, boolean equip)
+	{
+		this(name, itemCollection.getItems().get(0), quantity);
+		this.setUrlSuffix(itemCollection.getWikiTerm());
+		this.equip = equip;
+		this.addAlternates(itemCollection.getItems().subList(1, itemCollection.getItems().size()));
+	}
+
 	public void addAlternates(List<Integer> alternates)
 	{
 		this.alternateItems.addAll(alternates);
+	}
+
+	public void addAlternates(ItemCollections alternates)
+	{
+		this.alternateItems.addAll(alternates.getItems());
 	}
 
 	public void addAlternates(Integer... alternates)
@@ -160,10 +210,31 @@ public class ItemRequirement extends AbstractRequirement
 		return newItem;
 	}
 
+	public ItemRequirement named(String name)
+	{
+		ItemRequirement newItem = copy();
+		newItem.setName(name);
+		return newItem;
+	}
+
 	public ItemRequirement equipped()
 	{
 		ItemRequirement newItem = copy();
 		newItem.setEquip(true);
+		return newItem;
+	}
+
+	public ItemRequirement isNotConsumed()
+	{
+		ItemRequirement newItem = copy();
+		newItem.isConsumedItem = false;
+		return newItem;
+	}
+
+	public ItemRequirement doNotAggregate()
+	{
+		ItemRequirement newItem = copy();
+		newItem.shouldAggregate = false;
 		return newItem;
 	}
 
@@ -188,9 +259,22 @@ public class ItemRequirement extends AbstractRequirement
 		return newItem;
 	}
 
+	protected ItemRequirement copyOfClass()
+	{
+		if (this.getClass() != ItemRequirement.class)
+		{
+			throw new UnsupportedOperationException("Subclasses must override copy()");
+		}
+		return new ItemRequirement(name, id, quantity, equip);
+	}
+
 	public ItemRequirement copy()
 	{
-		ItemRequirement newItem = new ItemRequirement(name, id, quantity, equip);
+		ItemRequirement newItem = copyOfClass();
+		newItem.setName(name);
+		newItem.setId(id);
+		newItem.setEquip(equip);
+		newItem.setQuantity(quantity);
 		newItem.addAlternates(alternateItems);
 		newItem.setDisplayItemId(displayItemId);
 		newItem.setExclusiveToOneItemType(exclusiveToOneItemType);
@@ -198,7 +282,13 @@ public class ItemRequirement extends AbstractRequirement
 		newItem.setDisplayMatchedItemName(displayMatchedItemName);
 		newItem.setConditionToHide(conditionToHide);
 		newItem.questBank = questBank;
+		newItem.hadItemLastCheck = hadItemLastCheck;
+		newItem.isConsumedItem = isConsumedItem;
+		newItem.shouldAggregate = shouldAggregate;
 		newItem.setTooltip(getTooltip());
+		newItem.setUrlSuffix(getUrlSuffix());
+		newItem.additionalOptions = additionalOptions;
+		newItem.isChargedItem = isChargedItem;
 
 		return newItem;
 	}
@@ -231,7 +321,7 @@ public class ItemRequirement extends AbstractRequirement
 	{
 		List<LineComponent> lines = new ArrayList<>();
 
-		if (conditionToHide != null && conditionToHide.check(client))
+		if (!shouldDisplayText(client))
 		{
 			return lines;
 		}
@@ -267,10 +357,27 @@ public class ItemRequirement extends AbstractRequirement
 		return getName();
 	}
 
+	public String getSidebarText()
+	{
+		StringBuilder text = new StringBuilder();
+
+		if (showQuantity())
+		{
+			text.append(getQuantity()).append(" x ");
+		}
+
+		text.append(getDisplayText());
+
+		String html1 = "<html><body style='padding: 0px; margin: 0px; width: 140px'>";
+		String html2 = "</body></html>";
+
+		return html1 + text + html2;
+	}
+
 	@Override
 	public boolean shouldDisplayText(Client client)
 	{
-		return !conditionToHide.check(client);
+		return conditionToHide == null || !conditionToHide.check(client);
 	}
 
 	@Override
@@ -397,6 +504,12 @@ public class ItemRequirement extends AbstractRequirement
 
 	public boolean check(Client client, boolean checkConsideringSlotRestrictions, List<Item> items)
 	{
+		if (!shouldDisplayText(client)) return false;
+		if (additionalOptions != null && additionalOptions.check(client))
+		{
+			return true;
+		}
+
 		List<Item> allItems = new ArrayList<>(items);
 		if (questBank != null && questBank.getBankItems() != null)
 		{
@@ -416,9 +529,11 @@ public class ItemRequirement extends AbstractRequirement
 				allItems));
 			if (remainder <= 0)
 			{
+				hadItemLastCheck = true;
 				return true;
 			}
 		}
+		hadItemLastCheck = false;
 		return false;
 	}
 
@@ -461,6 +576,24 @@ public class ItemRequirement extends AbstractRequirement
 
 	public int getNumMatches(List<Item> items, int itemID)
 	{
+		if (isChargedItem)
+		{
+			return items.stream()
+				.filter(Objects::nonNull)
+				.filter(i -> i.getId() == itemID)
+				.mapToInt(i -> {
+					ItemWithCharge itemWithCharge = ItemWithCharge.findItem(i.getId());
+					if (itemWithCharge != null)
+					{
+						return itemWithCharge.getCharges();
+					}
+
+					// Fall back to using the item's quantity
+					return i.getQuantity();
+				})
+				.sum();
+		}
+
 		return items.stream()
 			.filter(Objects::nonNull)
 			.filter(i -> i.getId() == itemID)

@@ -28,12 +28,13 @@ import com.questhelper.QuestHelperConfig;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Pattern;
+
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.api.*;
 import net.runelite.api.widgets.JavaScriptCallback;
 import net.runelite.api.widgets.Widget;
-
 
 public class WidgetChoiceStep
 {
@@ -41,6 +42,11 @@ public class WidgetChoiceStep
 
 	@Getter
 	private final String choice;
+
+	@Setter
+	String expectedTextInWidget;
+
+	private Pattern pattern;
 
 	protected List<String> excludedStrings;
 	protected int excludedGroupId;
@@ -66,6 +72,29 @@ public class WidgetChoiceStep
 		this.groupId = groupId;
 		this.groupIdForChecking = groupId;
 		this.childId = childId;
+		this.pattern = null;
+	}
+
+	public WidgetChoiceStep(QuestHelperConfig config, int groupId, int childId)
+	{
+		this.config = config;
+		this.choice = null;
+		this.choiceById = -1;
+		this.groupId = groupId;
+		this.groupIdForChecking = groupId;
+		this.childId = childId;
+		this.pattern = null;
+	}
+
+	public WidgetChoiceStep(QuestHelperConfig config, Pattern pattern, int groupId, int childId)
+	{
+		this.config = config;
+		this.choice = null;
+		this.choiceById = -1;
+		this.groupId = groupId;
+		this.groupIdForChecking = groupId;
+		this.childId = childId;
+		this.pattern = pattern;
 	}
 
 	public WidgetChoiceStep(QuestHelperConfig config, int choiceId, int groupId, int childId)
@@ -86,6 +115,17 @@ public class WidgetChoiceStep
 		this.groupId = groupId;
 		this.groupIdForChecking = groupId;
 		this.childId = childId;
+	}
+
+	public WidgetChoiceStep(QuestHelperConfig config, int choiceId, Pattern pattern, int groupId, int childId)
+	{
+		this.config = config;
+		this.choice = null;
+		this.choiceById = choiceId;
+		this.groupId = groupId;
+		this.groupIdForChecking = groupId;
+		this.childId = childId;
+		this.pattern = pattern;
 	}
 
 	public void addExclusion(int excludedGroupId, int excludedChildId, String excludedString)
@@ -112,21 +152,27 @@ public class WidgetChoiceStep
 			{
 				for (Widget currentExclusionChoice : exclusionChoices)
 				{
-					if (excludedStrings.contains(currentExclusionChoice.getText()))
+					for (String excludedString : excludedStrings)
 					{
-						return;
+						if (currentExclusionChoice.getText().contains(excludedString))
+						{
+							return;
+						}
 					}
 				}
 			}
 		}
 		Widget dialogChoice = client.getWidget(groupId, childId);
-		if (dialogChoice != null)
+
+		if (dialogChoice == null)
 		{
-			Widget[] choices = dialogChoice.getChildren();
-			checkWidgets(choices);
-			Widget[] nestedChildren = dialogChoice.getNestedChildren();
-			checkWidgets(nestedChildren);
+			return;
 		}
+
+		Widget[] choices = dialogChoice.getChildren();
+		checkWidgets(choices);
+		Widget[] nestedChildren = dialogChoice.getNestedChildren();
+		checkWidgets(nestedChildren);
 	}
 
 	protected void checkWidgets(Widget[] choices)
@@ -135,7 +181,9 @@ public class WidgetChoiceStep
 		{
 			if (choiceById != -1 && choices[choiceById] != null)
 			{
-				if (choice == null || choice.equals(choices[choiceById].getText()))
+				if ((choice != null && choice.equals(choices[choiceById].getText())) ||
+					(pattern != null && pattern.matcher(choices[choiceById].getText()).find()) ||
+					(choice == null && pattern == null))
 				{
 					highlightText(choices[choiceById], choiceById);
 				}
@@ -144,7 +192,8 @@ public class WidgetChoiceStep
 			{
 				for (int i = 0; i < choices.length; i++)
 				{
-					if (choices[i].getText().equals(choice))
+					if (choices[i].getText().equals(choice) ||
+						(pattern != null && pattern.matcher(choices[i].getText()).find()))
 					{
 						highlightText(choices[i], i);
 						return;
